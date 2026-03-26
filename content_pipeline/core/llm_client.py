@@ -14,10 +14,13 @@ from functools import lru_cache
 
 from langchain_community.chat_models import ChatLlamaCpp
 from langchain_core.language_models import BaseChatModel
+from langchain_groq import ChatGroq
 
 from content_pipeline.core.settings import (
     GEMINI_API_KEY,
     GEMINI_MODEL,
+    GROQ_API_KEY,
+    GROQ_MODEL,
     LLAMA_CPP_MODEL_PATH,
     LLAMA_CPP_N_CTX,
     LLAMA_CPP_N_GPU_LAYERS,
@@ -79,9 +82,20 @@ def get_llm() -> BaseChatModel:
             model=OPENROUTER_MODEL,
             temperature=0.7,
         )
+    elif LLM_PROVIDER == "groq":
+        if not GROQ_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY not set in .env")
+        from langchain_openai import ChatOpenAI
 
+        return ChatGroq(
+            model=GROQ_MODEL,
+            temperature=0.7,
+            max_tokens=None,
+            timeout=None,
+            max_retries=2,
+        )
     else:
         raise ValueError(
             f"Unknown LLM_PROVIDER='{LLM_PROVIDER}'. "
-            "Choose: llama_cpp | gemini | openrouter"
+            "Choose: llama_cpp | gemini | openrouter | grok"
         )

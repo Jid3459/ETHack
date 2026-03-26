@@ -18,6 +18,12 @@ OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-7b-instruct")
 OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
 
+# OpenRouter
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+
+
 # ── Qdrant ────────────────────────────────────────────────────────────────────
 QDRANT_URL: str = os.getenv("QDRANT_URL", "localhost:6333")
 
