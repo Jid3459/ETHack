@@ -1,0 +1,50 @@
+# ── Core orchestration ────────────────────────────────────────────────────────
+langgraph>=0.2.0
+langchain-core>=0.2.0
+langchain-text-splitters>=0.2.0
+langchain-community
+
+# ── LLM providers ─────────────────────────────────────────────────────────────
+# llama-cpp-python — local Qwen GGUF inference (default)
+# Install with CPU-only support:
+#   pip install llama-cpp-python
+# Install with CUDA GPU support (much faster):
+#   CMAKE_ARGS="-DLLAMA_CUDA=on" pip install llama-cpp-python --force-reinstall
+llama-cpp-python>=0.2.90
+
+# Cloud providers (only needed if switching LLM_PROVIDER)
+langchain-google-genai>=1.0.0
+langchain-openai>=0.1.0
+
+# ── Embeddings ────────────────────────────────────────────────────────────────
+langchain-huggingface>=0.0.3
+transformers>=4.40.0
+sentence-transformers>=3.0.0
+torch>=2.2.0
+
+# ── Vector DB ─────────────────────────────────────────────────────────────────
+qdrant-client>=1.9.0
+
+# ── PDF ingestion ─────────────────────────────────────────────────────────────
+# Option A: PyMuPDF (simpler, included by default)
+pymupdf>=1.24.0
+# Option B: LlamaParse (better for regulatory PDFs — requires API key)
+# llama-parse>=0.4.0
+
+# ── Localization ──────────────────────────────────────────────────────────────
+# IndicTrans2 — install separately from GitHub:
+#   pip install git+https://github.com/AI4Bharat/IndicTrans2
+# IndicTransToolkit — required companion:
+#   pip install indic-transliteration IndicTransToolkit
+# These are optional — Agent 4 falls back to LLM-only if not installed
+
+# ── API ───────────────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+
+# ── HTTP client (Agent 5 distribution) ───────────────────────────────────────
+requests>=2.32.0
+
+# ── Config ────────────────────────────────────────────────────────────────────
+python-dotenv>=1.0.0
