@@ -92,7 +92,10 @@ class ContentState(TypedDict):
     # ── Distribution (Agent 5) ────────────────────────────────────────────────
     distribution_receipts: list[DistributionReceipt]
 
-    # ── Analytics (Agent 6 — written async post-publish) ─────────────────────
+    # ── Image generation (Agent 6) ────────────────────────────────────────────
+    generated_images: dict  # {platform: absolute file path}  e.g. {"linkedin": "/.../.png"}
+
+    # ── Analytics (written async post-publish) ────────────────────────────────
     engagement_data: Optional[dict]
     patterns_written: bool
 

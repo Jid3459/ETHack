@@ -23,6 +23,7 @@ from content_pipeline.agents.agent2_quality import agent2_quality_guardian
 from content_pipeline.agents.agent3_legal import agent3_legal_reviewer
 from content_pipeline.agents.agent4_localizer import agent4_localizer
 from content_pipeline.agents.agent5_distributor import agent5_distributor
+from content_pipeline.agents.agent6_image_generator import agent6_image_generator
 from content_pipeline.core import audit
 from content_pipeline.core.settings import MAX_BRAND_REVISIONS, MAX_LEGAL_REVISIONS
 from content_pipeline.core.state import ContentState
@@ -200,17 +201,17 @@ def route_after_legal_review(
 
 def route_after_human_gate(
     state: ContentState,
-) -> Literal["agent4_localizer", "agent1_drafter", "__end__"]:
+) -> Literal["agent6_image_generator", "agent1_drafter", "__end__"]:
     """
     After human decision:
-    - approve → localise
+    - approve → generate images → localise
     - reject with feedback → back to Agent 1 with feedback injected
     - reject without feedback → end pipeline
     """
     decision = state.get("human_decision", "reject")
 
     if decision == "approve":
-        return "agent4_localizer"
+        return "agent6_image_generator"
 
     feedback = state.get("human_feedback", "").strip()
     if feedback:
@@ -239,6 +240,7 @@ def build_graph() -> StateGraph:
     graph.add_node("human_gate", human_gate)
     graph.add_node("agent4_localizer", agent4_localizer)
     graph.add_node("agent5_distributor", agent5_distributor)
+    graph.add_node("agent6_image_generator", agent6_image_generator)
 
     # ── Entry point ───────────────────────────────────────────────────────────
     graph.set_entry_point("profile_loader")
@@ -246,6 +248,7 @@ def build_graph() -> StateGraph:
     # ── Unconditional edges ───────────────────────────────────────────────────
     graph.add_edge("profile_loader", "agent0_strategy_advisor")
     graph.add_edge("agent0_strategy_advisor", "agent1_drafter")
+    graph.add_edge("agent6_image_generator", "agent4_localizer")
     graph.add_edge("agent4_localizer", "agent5_distributor")
     graph.add_edge("agent5_distributor", END)
 
@@ -275,7 +278,7 @@ def build_graph() -> StateGraph:
         "human_gate",
         route_after_human_gate,
         {
-            "agent4_localizer": "agent4_localizer",
+            "agent6_image_generator": "agent6_image_generator",
             "agent1_drafter": "agent1_drafter",
             "__end__": END,
         },
@@ -344,6 +347,7 @@ def create_initial_state(
         human_feedback=None,
         escalated=False,
         localized_versions={},
+        generated_images={},
         distribution_receipts=[],
         engagement_data=None,
         patterns_written=False,
