@@ -1,0 +1,146 @@
+# 4 Ways to Add a Payment Button on WordPress website - Razorpay Blog
+> Source: https://razorpay.com/blog/4-ways-to-add-a-payment-button-on-wordpress-website/
+> Scraped: 2026-03-20T08:40:24.329166
+
+# 4 Ways to Add a Payment Button on WordPress website - Razorpay Blog
+
+[![Image 1: Razorpay Blog](https://razorpay.com/blog-content/uploads/2020/06/Logo.svg)](https://razorpay.com/ "Razorpay Blog")
+
+*   [Payments](https://razorpay.com/blog/category/payments/)
+*   [Business Banking Plus](https://razorpay.com/blog/category/business-banking/)
+    *   [Exclusive](https://razorpay.com/blog/category/business-banking/exclusive/)
+    *   [Forex](https://razorpay.com/blog/category/business-banking/forex/)
+
+*   [Online Commerce](https://razorpay.com/blog/category/online-commerce/)
+*   [Payroll](https://razorpay.com/blog/category/payroll/)
+*   [Customer Stories](https://razorpay.com/blog/category/customer-stories/)
+    *   [Inspiration Brew](https://razorpay.com/blog/category/inspiration-brew/)
+
+*   [Policies with Dr. Poli](https://razorpay.com/blog/category/policies-with-dr-poli/)
+
+[Blog](https://razorpay.com/blog) » [Payments](https://razorpay.com/blog/category/payments/) » 4 Ways to Add a Payment Button on WordPress website
+
+In[Payments](https://razorpay.com/blog/category/payments/)
+# 4 Ways to Add a Payment Button on WordPress website
+
+[September 28, 2021](https://razorpay.com/blog/4-ways-to-add-a-payment-button-on-wordpress-website/)6 Mins Read
+
+[![Image 2: Payment Button on WordPress](https://blog.razorpay.in/wp-content/uploads/2021/09/4-ways-to-add-a-payment-button-to-wordpress-1024x536.png)](https://blog.razorpay.in/wp-content/uploads/2021/09/4-ways-to-add-a-payment-button-to-wordpress.png)
+
+Share
+
+[Share on Facebook](https://www.facebook.com/sharer.php?u=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F "Share on Facebook")[Share on Twitter](https://twitter.com/intent/tweet?url=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F&text=4%20Ways%20to%20Add%20a%20Payment%20Button%20on%20WordPress%20website "Share on Twitter")[LinkedIn](https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F "LinkedIn")[Email](mailto:?subject=4%20Ways%20to%20Add%20a%20Payment%20Button%20on%20WordPress%20website&body=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F "Email")
+
+The start of something new is also the start of new challenges and newer solutions. If you are starting your business and have a website in place, one of the next steps in your growth journey will be finding solutions to collect payment via your website. What if we tell you [adding a payment button](https://razorpay.com/payment-buttons/) to your website is the easiest solution?
+
+Whether you are an artist, a content creator, a social worker, or an online educator, adding a payment button to your website can help you monetise your work in just a few simple clicks.
+
+A payment button helps you test your idea and translate your passion into a profession, without any investment and coding knowledge.
+
+_**Related Read:**[**What is a Payment Button?**](https://razorpay.com/blog/what-is-a-payment-button/)_
+
+## **Let us look at different ways you can add a payment button to your website.**
+
+### **1)****Turning passion into a profession – The Artist**
+
+![Image 3: Wordpress Payment Button Artist](https://razorpay.com/blog-content/uploads/2021/09/artist-add-a-payment-button-to-wordpress-1024x547.png)
+
+Art is abstract, and so are the ideas of an artist. You could be a musician or a painter or a fine artist, looking for ways to monetise your creations. Would it not be great if your audience could buy your creations directly from your website? Let us look at some quick ways to add a payment button to your website:
+
+*   **Add a Buy Now button:**For your audience to directly buy your art at the touch of a button, with no redirections and a seamless experience.
+*   **Add a Download Now button:** For your audience to pay and download your music from your website. 
+*   **Add a Pay Now button:** Get your students/members to enrol for art classes or workshops. Collect important details and accept payments with just one button.
+
+### **2)****Create content with power – The Influencer**
+
+![Image 4: payment button for Influencer](https://razorpay.com/blog-content/uploads/2021/09/content-creator-add-a-payment-button-to-wordpress-1024x547.png)
+
+We understand the importance of the effort you put in to build relevant educational and entertainment led content as a digital content creator. As a content creator, you would have regular visitors to your blog site or regular subscribers to the content you upload on YouTube. If you are looking for ways to add a payment button to your WordPress website to provide exclusive content access to your audience, here are some ways:
+
+*   **Add a Subscribe Now button:** To provide continued access to your newsletter with best-in-industry curated content or access to a blog with deeper insights and exclusive experiences offered to your audience. You can set up one-time, weekly or monthly plans by adding one-time or recurring options on your WordPress website using Razorpay Payment Button Plugins.
+*   **Add a Buy Now button:**To sell digital ebooks and whitepapers on topics that matter to your audience. Let your subscribers pay for digital content at a one-time price and get accessibility to the premium content at the touch of a button
+
+### **3)****Upskilling is the new skill – The Online Coach**
+
+The EdTech industry has grown at a rapid pace in the last 18 months owing to the COVID-19 pandemic and the shift in consumer behaviour. Professionals are increasingly inclining towards learning and upskilling with online courses, webinars, live sessions and membership-based coaching plans.
+
+![Image 5: payment button for Online Coach](https://razorpay.com/blog-content/uploads/2021/09/online-coach-add-a-payment-button-to-wordpress-1024x547.png)
+
+If you are in the education industry, providing online courses or workshops, you can add a payment button in many ways to suit your use cases.
+
+*   **Add a Subscribe Now button:**For your audience to subscribe to exclusive classes or to build membership-based recurring payment plans. Add a subscribe now button and get started faster with Razorpay Payment Button Plugin for WordPress.
+*   **Add a Pay Now button:**To let your audience pay for a Live webinar session or a workshop or to provide one-time access to individual lessons. Offer UPI, credit/debit card, international payments and more with just one payment button.
+
+### **4)****Caring is what makes us human – The Social Worker/NGO**
+
+If you are a social worker, you would need the help of some good samaritans to help you with donations and work on the cause you choose to promote. You can collect donations by adding a payment button on your website.
+
+![Image 6: Payment Button for Social Worker sites](https://razorpay.com/blog-content/uploads/2021/09/ngo-add-a-payment-button-to-wordpress-1024x547.png)
+
+**Adding a Donate Now button** on your website lets your audience donate to your NGO without any confusion and hassle. You can also provide them with the option of one-time, recurring, and international payments through the [Razorpay international payment](https://razorpay.com/international-payment-gateway-india/) gateway using the Payment Button.Keep a fixed amount or let your customers fill in the amount of their choice. From collecting important information to sending automated 80-G receipts, at the touch of a button.
+
+## **How to add a payment button to WordPress website or blog?**
+
+If you have a WordPress website, you can add Razorpay Payment Button to your website. You can add the plugin directly from your WordPress account following the instructions below, or[download the WordPress plugin](https://wordpress.org/plugins/razorpay-payment-button/) as a .zip file and upload it to your WordPress admin dashboard.
+
+_**Steps to install Razorpay Payment Button plugin from within WordPress:**_
+
+1.   Log in to your WordPress website admin dashboard
+2.   In the left sidebar menu, navigate to **Plugins > Add New**
+3.   Search for the Razorpay Payment Button for WordPress plugin (For WordPress site page),[Razorpay Payment Button for Elementor](https://wordpress.org/plugins/razorpay-payment-button-elementor/) (For an Elementor page)
+4.   In the upper right, click Install Now
+5.   Click Activate Plugin
+
+[**Also Read: Step-by-step guide to add Razorpay Payment Button on WordPress & Elementor website**](https://razorpay.com/blog/step-by-step-guide-to-add-razorpay-payment-button-on-wordpress-elementor-website/)
+
+## **Why should you choose Razorpay Payment Button Plugin?**
+
+Razorpay Payment Button plugin is a one-stop solution to collect one-time and recurring payments on your WordPress website with a single plugin.
+
+The best part about this plugin? You can start instantly, with no coding and an easy to set up configuration.
+
+Razorpay Payment Button allows you to create a button with pre-made templates and multiple customisations.
+
+_Start your growth journey with the Razorpay Payment Button plugin for your WordPress and Elementor website today! Take the first step towards a no-code and simplified solution to help you in collecting [digital payments](https://razorpay.com/learn/digital-payments-india-definition-methods-importance/)!_
+
+[Try Razorpay Payment Button](https://easy.razorpay.com/onboarding/)
+
+[payment buttons](https://razorpay.com/blog/tag/payment-buttons/)
+
+[](https://www.facebook.com/sharer.php?u=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F "Share on Facebook")[](https://twitter.com/intent/tweet?url=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F&text=4%20Ways%20to%20Add%20a%20Payment%20Button%20on%20WordPress%20website "Share on Twitter")[](https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F "LinkedIn")[](https://pinterest.com/pin/create/button/?url=https%3A%2F%2Frazorpay.com%2Fblog%2F4-ways-to-add-a-payment-button-on-wordpress-website%2F&media=https%3A%2F%2Fblog.razorpay.in%2Fwp-content%2Fuploads%2F2021%2F09%2F4-ways-to-add-a-payment-button-to-wordpress.png&description=4%20Ways%20to%20Add%20a%20Payment%20Button%20on%20WordPress%20website "Pinterest")
+
+![Image 7](https://secure.gravatar.com/avatar/afead221d0a8197d042ff14ec4789492459392e76bb3a95a921600d936ebb010?s=82&d=mm&r=g)
+
+Author[Priya Mahindroo](https://razorpay.com/blog/author/priya-mahindroo/ "Posts by Priya Mahindroo")
+
+#### Related Posts
+
+[![Image 8: How Global Businesses Eliminated AML Settlement Delays with Smart AML Screener by Razorpay](https://blog.razorpay.in/wp-content/uploads/2026/03/unnamed-1-770x515.jpg)](https://razorpay.com/blog/how-global-businesses-eliminated-aml-settlement-delays-with-smart-aml-screener-by-razorpay/ "How Global Businesses Eliminated AML Settlement Delays with Smart AML Screener by Razorpay")
+
+### [How Global Businesses Eliminated AML Settlement Delays with Smart AML Screener by Razorpay](https://razorpay.com/blog/how-global-businesses-eliminated-aml-settlement-delays-with-smart-aml-screener-by-razorpay/)
+
+March 11, 2026
+
+[![Image 9: MoneySaver Export Account](https://blog.razorpay.in/wp-content/uploads/2026/03/Gemini_Generated_Image_9pwdii9pwdii9pwd-770x515.png)](https://razorpay.com/blog/altview-razorpay-moneysaver-export-account/ "How AltView Advisory Streamlined Global Payments with Razorpay MoneySaver Export Account")
+
+### [How AltView Advisory Streamlined Global Payments with Razorpay MoneySaver Export Account](https://razorpay.com/blog/altview-razorpay-moneysaver-export-account/)
+
+March 8, 2026
+
+[](https://razorpay.com/blog/merchant-account-vs-payment-gateway-guide/ "Merchant Account vs Payment Gateway: The Complete Guide for Businesses")
+
+### [Merchant Account vs Payment Gateway: The Complete Guide for Businesses](https://razorpay.com/blog/merchant-account-vs-payment-gateway-guide/)
+
+March 6, 2026
+
+*   [Facebook](https://www.facebook.com/Razorpay/ "Facebook")
+*   [Twitter](https://twitter.com/Razorpay "Twitter")
+*   [Instagram](https://www.instagram.com/razorpay/ "Instagram")
+*   [YouTube](https://www.youtube.com/channel/UCddN5MDa_yirLO8fKVMVnhw "YouTube")
+*   [LinkedIn](https://in.linkedin.com/company/razorpay "LinkedIn")
+
+© Razorpay 2020 All Rights Reserved
+
+[Top](https://razorpay.com/blog/4-ways-to-add-a-payment-button-on-wordpress-website/#)
+
+[](https://razorpay.com/blog/4-ways-to-add-a-payment-button-on-wordpress-website/#)
