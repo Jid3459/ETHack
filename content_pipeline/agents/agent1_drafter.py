@@ -35,24 +35,29 @@ from content_pipeline.tools.retriever import Retriever
 _retriever = Retriever()
 
 
-def _fetch_proactive_constraints(brief: str, content_type: str) -> str:
+def _fetch_proactive_constraints(brief: str, content_type: str, industry: str = "") -> str:
     """
     Retrieve top regulatory constraints BEFORE drafting so Agent 1
     writes compliant content from the start.
-    Queries using topic + content_type as the search signal.
+    Queries using topic + content_type + industry as the search signal.
     """
-    query = f"{brief} {content_type} marketing claims fintech"
+    query = f"{brief} {content_type} marketing claims {industry}".strip()
     return _retriever.retrieve(query, limit=5)
 
 
 # ── Prompt builders ───────────────────────────────────────────────────────────
 
-_SYSTEM_PROMPT = """\
-You are an expert content writer for a fintech company.
+_SYSTEM_PROMPT_TEMPLATE = """\
+You are an expert content writer for a {industry} company.
 You write compelling, on-brand content that is fully compliant with
-Indian financial regulations and advertising standards.
+applicable regulations and advertising standards for the {industry} industry.
 Always respond with valid JSON only. No preamble, no markdown fences.
 """
+
+
+def _build_system_prompt(profile_fields: dict) -> str:
+    industry = profile_fields.get("industry", "enterprise")
+    return _SYSTEM_PROMPT_TEMPLATE.format(industry=industry)
 
 _DRAFT_PROMPT = """\
 <company_identity>
@@ -250,9 +255,10 @@ def _extract_profile_fields(profile: dict) -> dict:
             f"Tone: {profile.get('tone', '')}\n"
             f"Brand voice: {profile.get('brand_voice', '')}"
         ),
+        "industry": profile.get("industry", "enterprise"),
         "writing_rules": profile.get("writing_rules", "Write clearly and concisely."),
         "required_elements": "\n".join(profile.get("required_disclaimers", [])),
-        "persona": profile.get("default_persona", "SMB merchant owner, 30-45"),
+        "persona": profile.get("default_persona", "target customer"),
         "approved_terms": profile.get("approved_terms", {}),
     }
 
@@ -292,7 +298,7 @@ def _generate_short_form(
     if state["revision_count"] > 0:
         # Revision mode — surgical fixes
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=_build_system_prompt(profile_fields)),
             HumanMessage(
                 content=_REVISION_PROMPT.format(
                     previous_draft=state.get("current_draft", ""),
@@ -312,7 +318,7 @@ def _generate_short_form(
         # Fresh draft
         feedback = _load_previous_feedback(state["company_id"], state["channel"])
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=_build_system_prompt(profile_fields)),
             HumanMessage(
                 content=_DRAFT_PROMPT.format(
                     company_identity=profile_fields["company_identity"],
@@ -353,7 +359,7 @@ def _generate_blog_outline(
 ) -> dict:
     """Pass 1: generate blog outline."""
     messages = [
-        SystemMessage(content=_SYSTEM_PROMPT),
+        SystemMessage(content=_build_system_prompt(profile_fields)),
         HumanMessage(
             content=_OUTLINE_PROMPT.format(
                 company_identity=profile_fields["company_identity"],
@@ -391,7 +397,7 @@ def _generate_blog_sections(
         # Retrieve regulatory constraints specific to this section's topic
         section_constraints = _retriever.retrieve(section["key_point"], limit=3)
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=_build_system_prompt(profile_fields)),
             HumanMessage(
                 content=_SECTION_PROMPT.format(
                     company_identity=profile_fields["company_identity"],
@@ -449,7 +455,7 @@ def agent1_drafter(state: ContentState) -> ContentState:
         if state["revision_count"] == 0:
             # Fetch proactive constraints for the full brief
             regulatory_context = _fetch_proactive_constraints(
-                state["brief"], "blog article"
+                state["brief"], "blog article", profile_fields["industry"]
             )
             outline = _generate_blog_outline(state, profile_fields, llm)
             sections = _generate_blog_sections(outline, profile_fields, llm)
@@ -463,7 +469,7 @@ def agent1_drafter(state: ContentState) -> ContentState:
             # Re-run short-form revision logic on the assembled draft
             state_for_revision = {**state, "channel": "linkedin"}  # use short-form path
             regulatory_context = _fetch_proactive_constraints(
-                state["brief"], "blog article"
+                state["brief"], "blog article", profile_fields["industry"]
             )
             draft = _generate_short_form(
                 {**state, "channel": "blog"},
@@ -523,7 +529,7 @@ def agent1_drafter(state: ContentState) -> ContentState:
 
     else:
         # ── Short-form path (LinkedIn, email, Twitter) ────────────────────────
-        regulatory_context = _fetch_proactive_constraints(state["brief"], channel)
+        regulatory_context = _fetch_proactive_constraints(state["brief"], channel, profile_fields["industry"])
         draft = _generate_short_form(state, profile_fields, regulatory_context, llm)
         print("Drafting Complete.")
         pprint.pprint(

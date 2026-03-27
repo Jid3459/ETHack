@@ -10,11 +10,12 @@ langchain-community
 #   pip install llama-cpp-python
 # Install with CUDA GPU support (much faster):
 #   CMAKE_ARGS="-DLLAMA_CUDA=on" pip install llama-cpp-python --force-reinstall
-llama-cpp-python>=0.2.90
+
 
 # Cloud providers (only needed if switching LLM_PROVIDER)
 langchain-google-genai>=1.0.0
 langchain-openai>=0.1.0
+langchain-groq
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
 langchain-huggingface>=0.0.3
