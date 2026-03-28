@@ -227,7 +227,6 @@ def _run_semantic_check(
                 permitted_language=permitted_language,
             )
         ),
-        AIMessage(content="<think>\n</think>\n"),
     ]
 
     response = llm.invoke(messages)

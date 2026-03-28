@@ -23,9 +23,14 @@ from content_pipeline.agents.agent2_quality import agent2_quality_guardian
 from content_pipeline.agents.agent3_legal import agent3_legal_reviewer
 from content_pipeline.agents.agent4_localizer import agent4_localizer
 from content_pipeline.agents.agent5_distributor import agent5_distributor
+from content_pipeline.agents.agent6_image_generator import agent6_image_generator
 from content_pipeline.core import audit
 from content_pipeline.core.settings import MAX_BRAND_REVISIONS, MAX_LEGAL_REVISIONS
 from content_pipeline.core.state import ContentState
+
+from phoenix.otel import register
+
+tracer_provider = register(project_name="content-shield", auto_instrument=True)
 
 # ── Profile loader node ───────────────────────────────────────────────────────
 
@@ -37,12 +42,13 @@ def profile_loader(state: ContentState) -> ContentState:
     """
     company_id = state["company_id"]
 
-    # Stub: return a realistic Razorpay profile
-    # Replace with: profile = qdrant_client.retrieve(company_profiles_collection, company_id)
-    profile = (
-        _RAZORPAY_DEMO_PROFILE
-        if company_id == "razorpay_demo"
-        else {
+    # Use profile already in state (from /onboard), else fall back to demo/generic
+    if state.get("company_profile"):
+        profile = state["company_profile"]
+    elif company_id == "razorpay_demo":
+        profile = _RAZORPAY_DEMO_PROFILE
+    else:
+        profile = {
             "name": company_id,
             "industry": "Fintech",
             "tone": "Professional",
@@ -52,15 +58,14 @@ def profile_loader(state: ContentState) -> ContentState:
             "default_persona": "Business owner",
             "writing_rules": "Write clearly and concisely.",
             "permitted_language": """The following types of statements are ALWAYS permitted and must NOT be flagged:
-- Comparative claims with qualifiers: "faster than traditional methods", 
+- Comparative claims with qualifiers: "faster than traditional methods",
   "more efficient than before"
 - Hedged outcome claims: "can help improve", "may receive", "typically within"
 - Feature descriptions: stating what a product does is not a guarantee
 - Professional aspirational language: "grow your business", "take control"
-Standard fintech marketing language is permitted. Only flag genuine 
+Standard fintech marketing language is permitted. Only flag genuine
 violations of specific brand rules.""",
         }
-    )
 
     return {
         **state,
@@ -107,6 +112,7 @@ _RAZORPAY_DEMO_PROFILE = {
         "Voice: second person — address the merchant directly. "
         "Always lead with business outcome, not the feature name."
     ),
+    "brand_colors": {"primary": "#072654", "secondary": "#2175ce"},
 }
 
 
@@ -200,17 +206,17 @@ def route_after_legal_review(
 
 def route_after_human_gate(
     state: ContentState,
-) -> Literal["agent4_localizer", "agent1_drafter", "__end__"]:
+) -> Literal["agent6_image_generator", "agent1_drafter", "__end__"]:
     """
     After human decision:
-    - approve → localise
+    - approve → generate images → localise
     - reject with feedback → back to Agent 1 with feedback injected
     - reject without feedback → end pipeline
     """
     decision = state.get("human_decision", "reject")
 
     if decision == "approve":
-        return "agent4_localizer"
+        return "agent6_image_generator"
 
     feedback = state.get("human_feedback", "").strip()
     if feedback:
@@ -239,6 +245,7 @@ def build_graph() -> StateGraph:
     graph.add_node("human_gate", human_gate)
     graph.add_node("agent4_localizer", agent4_localizer)
     graph.add_node("agent5_distributor", agent5_distributor)
+    graph.add_node("agent6_image_generator", agent6_image_generator)
 
     # ── Entry point ───────────────────────────────────────────────────────────
     graph.set_entry_point("profile_loader")
@@ -246,6 +253,7 @@ def build_graph() -> StateGraph:
     # ── Unconditional edges ───────────────────────────────────────────────────
     graph.add_edge("profile_loader", "agent0_strategy_advisor")
     graph.add_edge("agent0_strategy_advisor", "agent1_drafter")
+    graph.add_edge("agent6_image_generator", "agent4_localizer")
     graph.add_edge("agent4_localizer", "agent5_distributor")
     graph.add_edge("agent5_distributor", END)
 
@@ -275,7 +283,7 @@ def build_graph() -> StateGraph:
         "human_gate",
         route_after_human_gate,
         {
-            "agent4_localizer": "agent4_localizer",
+            "agent6_image_generator": "agent6_image_generator",
             "agent1_drafter": "agent1_drafter",
             "__end__": END,
         },
@@ -311,8 +319,10 @@ def create_initial_state(
     brief: str,
     channel: str = "",
     content_type: str = "",
+    target_audience: str | None = None,
     target_languages: list[str] | None = None,
     scheduled_time: str | None = None,
+    company_profile: dict | None = None,
 ) -> ContentState:
     """
     Build the initial ContentState for a new pipeline run.
@@ -322,13 +332,14 @@ def create_initial_state(
         run_id=str(uuid.uuid4()),
         company_id=company_id,
         brief=brief,
-        channel=channel,
-        content_type=content_type,
+        channel=channel.lower().strip(),
+        content_type=content_type.lower().strip(),
+        target_audience=target_audience,
         target_languages=target_languages or ["en"],
         scheduled_time=scheduled_time,
         strategy_card=None,
         confirmed_platforms=[],
-        company_profile=None,
+        company_profile=company_profile,
         current_draft=None,
         blog_outline=None,
         blog_sections=None,
@@ -344,6 +355,7 @@ def create_initial_state(
         human_feedback=None,
         escalated=False,
         localized_versions={},
+        generated_images={},
         distribution_receipts=[],
         engagement_data=None,
         patterns_written=False,

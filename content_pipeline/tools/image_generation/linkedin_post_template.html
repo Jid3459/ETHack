@@ -1,0 +1,149 @@
+<html>
+
+<head>
+    <title>Linkedin Post Template</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"
+        rel="stylesheet">
+</head>
+<style>
+    :root {
+        --brand-primary: #072654;
+        --brand-secondary: #2175ce;
+        font-family: Nunito;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+    }
+
+    .post-container {
+        height: 627;
+        width: 1200px;
+        padding: 32px;
+        background-color: rgb(221, 221, 221);
+        position: relative;
+        overflow: hidden;
+    }
+
+    #logo {
+        position: relative;
+        height: 50px;
+    }
+
+    #logo img {
+        height: 100%;
+    }
+
+    .content-box {
+        width: 800px;
+        height: 60%;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+    }
+
+    .content {
+        font-size: 20px;
+        display: inline-block;
+    }
+
+    .headline-text {
+        color: var(--brand-primary);
+        font-weight: 800;
+        letter-spacing: -1px;
+        font-size: 3em;
+        font-weight: 800;
+    }
+
+    .subtext {
+        font-size: 1.8em;
+        margin-top: 0.5em;
+        color: var(--brand-secondary);
+    }
+
+    .cta {
+        font-size: 1em;
+        margin-top: 1em;
+        font-weight: bold;
+    }
+
+    .background-img-container {
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .background-img-container img {
+        object-fit: fill;
+        width: 100%;
+    }
+</style>
+
+<body>
+    <div class="post-container">
+        <div class="background-img-container">
+            <img src="brand_images\razorpay\linkedin_background.png" alt="" id="background-img">
+        </div>
+        <div id="logo">
+            <img src="brand_images\razorpay\logo.png" id="logo-img" />
+        </div>
+        <div class="content-box" id="content-box">
+            <div class="content" id="content">
+                <div class="headline-text" id="headline-text">
+                    {headline}
+                </div>
+                <div class="subtext">
+                    {subtext}
+                </div>
+                <div class="cta">
+                    {cta}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function fitContent() {
+            const box = document.getElementById("content-box");
+            const content = document.getElementById("content");
+
+            let scale = 1;
+
+            // Reset first
+            content.style.transform = "scale(1)";
+
+            const boxWidth = box.clientWidth;
+            const boxHeight = box.clientHeight;
+
+            const contentWidth = content.scrollWidth;
+            const contentHeight = content.scrollHeight;
+
+            const scaleX = boxWidth / contentWidth;
+            const scaleY = boxHeight / contentHeight;
+
+            scale = Math.min(scaleX, scaleY);
+
+            content.style.transform = `scale(${scale})`;
+            content.style.transformOrigin = "left center";
+            window.renderDone = true
+            console.log(window.renderDone)
+        }
+        document.onload = () => {
+            document.fonts.ready.then(() => {
+                fitContent();
+            });
+        }
+    </script>
+</body>
+
+</html>

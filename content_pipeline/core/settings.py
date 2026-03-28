@@ -35,7 +35,7 @@ CONTENT_PATTERNS_COLLECTION: str = "content_patterns"
 AUDIT_LOGS_COLLECTION: str = "audit_logs"
 
 # ── Embedding ─────────────────────────────────────────────────────────────────
-EMBEDDING_NAME: str = "BAAI/bge-m3"
+EMBEDDING_NAME: str = os.getenv("EMBEDDING_NAME", "BAAI/bge-m3")
 CHUNK_SIZE: int = 500
 CHUNK_OVERLAP: int = 50
 

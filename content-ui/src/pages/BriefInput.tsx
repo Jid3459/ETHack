@@ -17,6 +17,13 @@ const D = {
 const CHANNELS = ['LinkedIn', 'Twitter', 'Blog', 'Email', 'Instagram']
 const CONTENT_TYPES = ['Post', 'Article', 'Newsletter', 'Ad Copy', 'Press Release']
 const LANGUAGES = ['en', 'hi', 'ta', 'te', 'bn']
+const AUDIENCE_PRESETS = [
+  'SMB merchants',
+  'First-time investors',
+  'Enterprise finance teams',
+  'Startup founders',
+  'Retail consumers',
+]
 const LANGUAGE_LABELS: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali',
 }
@@ -28,6 +35,7 @@ export default function BriefInput() {
   const [brief, setBrief] = useState('')
   const [channel, setChannel] = useState('LinkedIn')
   const [contentType, setContentType] = useState('Post')
+  const [targetAudience, setTargetAudience] = useState('')
   const [languages, setLanguages] = useState<string[]>(['en'])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

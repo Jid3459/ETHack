@@ -27,6 +27,7 @@ export const startRun = (data: {
   brief: string
   channel: string
   content_type: string
+  target_audience?: string
   target_languages: string[]
   scheduled_time?: string
 }) => api.post('/run', data).then(r => r.data as { run_id: string })

@@ -54,6 +54,7 @@ class ContentState(TypedDict):
     brief: str  # raw topic + context from user
     channel: str  # "linkedin" | "blog" | "email"
     content_type: str  # "post" | "article" | "newsletter"
+    target_audience: Optional[str]  # e.g. "first-time investors", "SMB finance teams"
     target_languages: list[str]  # ["en", "hi", "ta"]
     scheduled_time: Optional[str]  # ISO string or None
 
@@ -92,7 +93,10 @@ class ContentState(TypedDict):
     # ── Distribution (Agent 5) ────────────────────────────────────────────────
     distribution_receipts: list[DistributionReceipt]
 
-    # ── Analytics (Agent 6 — written async post-publish) ─────────────────────
+    # ── Image generation (Agent 6) ────────────────────────────────────────────
+    generated_images: dict  # {platform: absolute file path}  e.g. {"linkedin": "/.../.png"}
+
+    # ── Analytics (written async post-publish) ────────────────────────────────
     engagement_data: Optional[dict]
     patterns_written: bool
 

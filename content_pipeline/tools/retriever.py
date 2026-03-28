@@ -9,8 +9,10 @@ Fixes applied to the original code:
   - Added retrieve_for_claims() for Agent 3's per-claim parallel retrieval
   - Added filter helpers for metadata-scoped retrieval
 """
+
 from __future__ import annotations
 
+from functools import lru_cache
 import uuid
 from typing import List, Optional
 
@@ -29,24 +31,47 @@ from content_pipeline.core.settings import (
 )
 
 # ── Singletons (loaded once at import time) ───────────────────────────────────
-_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_NAME)
-_embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+
+
+@lru_cache(maxsize=1)
+def get_langchain_hf_embedding():
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+
+
+@lru_cache(maxsize=1)
+def get_hf_tokenizer():
+    return AutoTokenizer.from_pretrained(
+        EMBEDDING_NAME, use_fast=True, local_files_only=True
+    )
+
+
+@lru_cache(maxsize=1)
+def get_retriever():
+    return Retriever()
+
+
+@lru_cache(maxsize=1)
+def get_qdrant_client():
+    return QdrantClient(url=QDRANT_URL)
+
+
+_tokenizer = get_hf_tokenizer()
+_embedding = get_langchain_hf_embedding()
+qdrant_client = get_qdrant_client()
 
 
 # ── Document schema ───────────────────────────────────────────────────────────
-
 class Document(BaseModel):
-    regulatory_body: str    # e.g. "RBI", "NPCI", "ASCI"
-    circular_number: str    # e.g. "RBI/2019-20/174"
-    section: str            # e.g. "8.4"
-    title: str              # e.g. "Merchant Communication"
-    text: str               # full section text to be chunked
-    applies_to: List[str] = []   # e.g. ["settlement_claims", "payment_gateway"]
-    date: str = ""               # e.g. "2020-03-17"
+    regulatory_body: str  # e.g. "RBI", "NPCI", "ASCI"
+    circular_number: str  # e.g. "RBI/2019-20/174"
+    section: str  # e.g. "8.4"
+    title: str  # e.g. "Merchant Communication"
+    text: str  # full section text to be chunked
+    applies_to: List[str] = []  # e.g. ["settlement_claims", "payment_gateway"]
+    date: str = ""  # e.g. "2020-03-17"
 
 
 # ── Retriever ─────────────────────────────────────────────────────────────────
-
 class Retriever:
     """
     Manages ingestion and retrieval for the regulatory_documents collection.
@@ -58,7 +83,7 @@ class Retriever:
     """
 
     def __init__(self) -> None:
-        self.client = QdrantClient(url=QDRANT_URL)
+        self.client = qdrant_client
         self._splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
             _tokenizer,
             chunk_size=CHUNK_SIZE,
@@ -74,9 +99,13 @@ class Retriever:
         """
         if self.client.collection_exists(REGULATORY_DOC_COLLECTION):
             if not force:
-                res = input(
-                    "Regulatory collection already exists. Delete and recreate? (y/n): "
-                ).strip().lower()
+                res = (
+                    input(
+                        "Regulatory collection already exists. Delete and recreate? (y/n): "
+                    )
+                    .strip()
+                    .lower()
+                )
                 if res not in ("y", "yes"):
                     print("Skipping collection creation.")
                     return
@@ -91,8 +120,10 @@ class Retriever:
                 distance=models.Distance.COSINE,
             ),
         )
-        print(f"Created collection '{REGULATORY_DOC_COLLECTION}' "
-              f"(dim={len(sample_vector)})")
+        print(
+            f"Created collection '{REGULATORY_DOC_COLLECTION}' "
+            f"(dim={len(sample_vector)})"
+        )
 
     # ── Ingestion ─────────────────────────────────────────────────────────────
 
@@ -135,7 +166,9 @@ class Retriever:
                 collection_name=REGULATORY_DOC_COLLECTION,
                 points=points,
             )
-        print(f"Ingested {len(documents)} document(s) into '{REGULATORY_DOC_COLLECTION}'")
+        print(
+            f"Ingested {len(documents)} document(s) into '{REGULATORY_DOC_COLLECTION}'"
+        )
 
     # ── Retrieval ─────────────────────────────────────────────────────────────
 

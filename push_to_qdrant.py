@@ -2,7 +2,7 @@ import csv
 import json
 from io import StringIO
 
-from content_pipeline.tools.retriever import Document, Retriever
+from content_pipeline.tools.retriever import Document, Retriever, get_retriever
 
 
 csv_data = open("regulation_docs.csv", "r", encoding="utf-8").read()
@@ -35,7 +35,7 @@ def parse_csv_to_documents(csv_text: str) -> list[Document]:
     return documents
 
 
-retriever = Retriever()
+retriever = get_retriever()
 retriever.create_collection(force=True)  # WARNING: deletes existing data
 documents = parse_csv_to_documents(csv_data)
 retriever.embed_documents(documents)
