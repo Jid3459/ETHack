@@ -54,6 +54,7 @@ class ContentState(TypedDict):
     brief: str  # raw topic + context from user
     channel: str  # "linkedin" | "blog" | "email"
     content_type: str  # "post" | "article" | "newsletter"
+    target_audience: Optional[str]  # e.g. "first-time investors", "SMB finance teams"
     target_languages: list[str]  # ["en", "hi", "ta"]
     scheduled_time: Optional[str]  # ISO string or None
 

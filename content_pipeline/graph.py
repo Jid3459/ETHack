@@ -42,12 +42,13 @@ def profile_loader(state: ContentState) -> ContentState:
     """
     company_id = state["company_id"]
 
-    # Stub: return a realistic Razorpay profile
-    # Replace with: profile = qdrant_client.retrieve(company_profiles_collection, company_id)
-    profile = (
-        _RAZORPAY_DEMO_PROFILE
-        if company_id == "razorpay_demo"
-        else {
+    # Use profile already in state (from /onboard), else fall back to demo/generic
+    if state.get("company_profile"):
+        profile = state["company_profile"]
+    elif company_id == "razorpay_demo":
+        profile = _RAZORPAY_DEMO_PROFILE
+    else:
+        profile = {
             "name": company_id,
             "industry": "Fintech",
             "tone": "Professional",
@@ -57,15 +58,14 @@ def profile_loader(state: ContentState) -> ContentState:
             "default_persona": "Business owner",
             "writing_rules": "Write clearly and concisely.",
             "permitted_language": """The following types of statements are ALWAYS permitted and must NOT be flagged:
-- Comparative claims with qualifiers: "faster than traditional methods", 
+- Comparative claims with qualifiers: "faster than traditional methods",
   "more efficient than before"
 - Hedged outcome claims: "can help improve", "may receive", "typically within"
 - Feature descriptions: stating what a product does is not a guarantee
 - Professional aspirational language: "grow your business", "take control"
-Standard fintech marketing language is permitted. Only flag genuine 
+Standard fintech marketing language is permitted. Only flag genuine
 violations of specific brand rules.""",
         }
-    )
 
     return {
         **state,
@@ -319,8 +319,10 @@ def create_initial_state(
     brief: str,
     channel: str = "",
     content_type: str = "",
+    target_audience: str | None = None,
     target_languages: list[str] | None = None,
     scheduled_time: str | None = None,
+    company_profile: dict | None = None,
 ) -> ContentState:
     """
     Build the initial ContentState for a new pipeline run.
@@ -330,13 +332,14 @@ def create_initial_state(
         run_id=str(uuid.uuid4()),
         company_id=company_id,
         brief=brief,
-        channel=channel,
-        content_type=content_type,
+        channel=channel.lower().strip(),
+        content_type=content_type.lower().strip(),
+        target_audience=target_audience,
         target_languages=target_languages or ["en"],
         scheduled_time=scheduled_time,
         strategy_card=None,
         confirmed_platforms=[],
-        company_profile=None,
+        company_profile=company_profile,
         current_draft=None,
         blog_outline=None,
         blog_sections=None,

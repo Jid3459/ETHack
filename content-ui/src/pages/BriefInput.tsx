@@ -6,6 +6,13 @@ import { useApp } from '../context/AppContext'
 const CHANNELS = ['LinkedIn', 'Twitter', 'Blog', 'Email', 'Instagram']
 const CONTENT_TYPES = ['Post', 'Article', 'Newsletter', 'Ad Copy', 'Press Release']
 const LANGUAGES = ['en', 'hi', 'ta', 'te', 'bn']
+const AUDIENCE_PRESETS = [
+  'SMB merchants',
+  'First-time investors',
+  'Enterprise finance teams',
+  'Startup founders',
+  'Retail consumers',
+]
 const LANGUAGE_LABELS: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali'
 }
@@ -17,6 +24,7 @@ export default function BriefInput() {
   const [brief, setBrief] = useState('')
   const [channel, setChannel] = useState('LinkedIn')
   const [contentType, setContentType] = useState('Post')
+  const [targetAudience, setTargetAudience] = useState('')
   const [languages, setLanguages] = useState<string[]>(['en'])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -40,6 +48,7 @@ export default function BriefInput() {
         brief,
         channel,
         content_type: contentType,
+        target_audience: targetAudience.trim() || undefined,
         target_languages: languages,
       })
       setRunId(res.run_id)
@@ -146,6 +155,28 @@ export default function BriefInput() {
           </div>
         </div>
 
+        {/* Target Audience */}
+        <div>
+          <label style={labelStyle}>Target Audience <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span></label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            {AUDIENCE_PRESETS.map(a => (
+              <button
+                key={a}
+                style={chipStyle(targetAudience === a)}
+                onClick={() => setTargetAudience(prev => prev === a ? '' : a)}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+          <input
+            style={inputStyle}
+            placeholder="Or type a custom audience (e.g. 'D2C brand owners')"
+            value={targetAudience}
+            onChange={e => setTargetAudience(e.target.value)}
+          />
+        </div>
+
         {/* Languages */}
         <div>
           <label style={labelStyle}>Target Languages</label>
@@ -174,6 +205,7 @@ export default function BriefInput() {
           {[
             { label: 'Channel', value: channel },
             { label: 'Type', value: contentType },
+            { label: 'Audience', value: targetAudience || 'Default' },
             { label: 'Languages', value: languages.map(l => LANGUAGE_LABELS[l]).join(', ') },
             { label: 'Company', value: companyName || '—' },
           ].map(item => (

@@ -12,6 +12,7 @@ Fixes applied to the original code:
 
 from __future__ import annotations
 
+from functools import lru_cache
 import uuid
 from typing import List, Optional
 
@@ -50,6 +51,11 @@ class Document(BaseModel):
 
 
 # ── Retriever ─────────────────────────────────────────────────────────────────
+
+
+@lru_cache(maxsize=1)
+def get_retriever():
+    return Retriever()
 
 
 class Retriever:

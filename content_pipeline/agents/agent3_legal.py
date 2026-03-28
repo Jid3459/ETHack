@@ -18,15 +18,15 @@ import json
 import pprint
 import re
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from content_pipeline.core import audit
 from content_pipeline.core.llm_client import get_llm
 from content_pipeline.core.state import ContentState, LegalFlag
 from content_pipeline.core.utils import clean_llm_response
-from content_pipeline.tools.retriever import Retriever
+from content_pipeline.tools.retriever import get_retriever
 
-_retriever = Retriever()
+_retriever = get_retriever()
 
 # ── Claim extraction ──────────────────────────────────────────────────────────
 
