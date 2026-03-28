@@ -9,21 +9,21 @@ Lifecycle:
 Cold-start:
   Returns generic best-practice fallback when no feedback exists yet.
 """
+
 from __future__ import annotations
 
 import uuid as _uuid
 from datetime import datetime, timezone
 
-from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient, models
+from qdrant_client import models
 
-from content_pipeline.core.settings import (
-    EMBEDDING_NAME,
-    FEEDBACK_MEMORY_COLLECTION,
-    QDRANT_URL,
+from content_pipeline.tools.retriever import (
+    get_qdrant_client,
+    get_langchain_hf_embedding,
 )
+from content_pipeline.core.settings import FEEDBACK_MEMORY_COLLECTION
 
-_embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+_embedding = get_langchain_hf_embedding()
 
 _COLD_START_MESSAGE = (
     "No engagement feedback available yet for this company. "
@@ -46,7 +46,7 @@ class FeedbackMemoryStore:
     """
 
     def __init__(self) -> None:
-        self.client = QdrantClient(url=QDRANT_URL)
+        self.client = get_qdrant_client()
 
     def _ensure_collection(self) -> None:
         """Create feedback_memory collection if it doesn't exist."""
@@ -60,7 +60,9 @@ class FeedbackMemoryStore:
                 distance=models.Distance.COSINE,
             ),
         )
-        print(f"[FeedbackMemoryStore] Created collection '{FEEDBACK_MEMORY_COLLECTION}'")
+        print(
+            f"[FeedbackMemoryStore] Created collection '{FEEDBACK_MEMORY_COLLECTION}'"
+        )
 
     def write_feedback(
         self,
@@ -172,7 +174,9 @@ class FeedbackMemoryStore:
             reverse=True,
         )[:n]
 
-        lines = [f"Past {channel} post engagement for this company (most recent first):"]
+        lines = [
+            f"Past {channel} post engagement for this company (most recent first):"
+        ]
         for pt in sorted_results:
             p = pt.payload or {}
             er = p.get("engagement_rate", 0)

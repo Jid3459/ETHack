@@ -31,15 +31,36 @@ from content_pipeline.core.settings import (
 )
 
 # ── Singletons (loaded once at import time) ───────────────────────────────────
-_tokenizer = AutoTokenizer.from_pretrained(
-    EMBEDDING_NAME, use_fast=True, local_files_only=True
-)
-_embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+
+
+@lru_cache(maxsize=1)
+def get_langchain_hf_embedding():
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+
+
+@lru_cache(maxsize=1)
+def get_hf_tokenizer():
+    return AutoTokenizer.from_pretrained(
+        EMBEDDING_NAME, use_fast=True, local_files_only=True
+    )
+
+
+@lru_cache(maxsize=1)
+def get_retriever():
+    return Retriever()
+
+
+@lru_cache(maxsize=1)
+def get_qdrant_client():
+    return QdrantClient(url=QDRANT_URL)
+
+
+_tokenizer = get_hf_tokenizer()
+_embedding = get_langchain_hf_embedding()
+qdrant_client = get_qdrant_client()
 
 
 # ── Document schema ───────────────────────────────────────────────────────────
-
-
 class Document(BaseModel):
     regulatory_body: str  # e.g. "RBI", "NPCI", "ASCI"
     circular_number: str  # e.g. "RBI/2019-20/174"
@@ -51,13 +72,6 @@ class Document(BaseModel):
 
 
 # ── Retriever ─────────────────────────────────────────────────────────────────
-
-
-@lru_cache(maxsize=1)
-def get_retriever():
-    return Retriever()
-
-
 class Retriever:
     """
     Manages ingestion and retrieval for the regulatory_documents collection.
@@ -69,7 +83,7 @@ class Retriever:
     """
 
     def __init__(self) -> None:
-        self.client = QdrantClient(url=QDRANT_URL)
+        self.client = qdrant_client
         self._splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
             _tokenizer,
             chunk_size=CHUNK_SIZE,

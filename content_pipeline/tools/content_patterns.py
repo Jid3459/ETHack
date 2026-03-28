@@ -11,26 +11,26 @@ Cold-start:
   automatically. If no records exist for a company yet, load_engagement_history()
   returns a generic bootstrap message so Agent 0 still has reasonable priors.
 """
+
 from __future__ import annotations
 
 import uuid as _uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient, models
+from qdrant_client import models
 
-from content_pipeline.core.settings import (
-    CONTENT_PATTERNS_COLLECTION,
-    EMBEDDING_NAME,
-    QDRANT_URL,
+from content_pipeline.tools.retriever import (
+    get_qdrant_client,
+    get_langchain_hf_embedding,
 )
+from content_pipeline.core.settings import CONTENT_PATTERNS_COLLECTION
 
 if TYPE_CHECKING:
     from content_pipeline.core.state import ContentState
 
 # Reuse the singleton embedding model (loaded once at import time)
-_embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
+_embedding = get_langchain_hf_embedding()
 
 # ── Cold-start fallback ───────────────────────────────────────────────────────
 
@@ -45,6 +45,7 @@ _COLD_START_MESSAGE = (
 
 
 # ── Store ─────────────────────────────────────────────────────────────────────
+
 
 class ContentPatternsStore:
     """
@@ -62,7 +63,7 @@ class ContentPatternsStore:
     """
 
     def __init__(self) -> None:
-        self.client = QdrantClient(url=QDRANT_URL)
+        self.client = get_qdrant_client()
 
     # ── Collection bootstrap ──────────────────────────────────────────────────
 
@@ -103,12 +104,12 @@ class ContentPatternsStore:
 
         receipts = state.get("distribution_receipts", [])
         channels_published = [
-            r["channel"] for r in receipts
+            r["channel"]
+            for r in receipts
             if r.get("status") in ("published", "scheduled")
         ]
         channels_failed = [
-            r["channel"] for r in receipts
-            if r.get("status") == "failed"
+            r["channel"] for r in receipts if r.get("status") == "failed"
         ]
 
         if channels_failed and channels_published:
@@ -120,9 +121,7 @@ class ContentPatternsStore:
 
         brand_score = state.get("brand_score")
         legal_flags = state.get("legal_flags", [])
-        high_legal_count = sum(
-            1 for f in legal_flags if f.get("risk_level") == "HIGH"
-        )
+        high_legal_count = sum(1 for f in legal_flags if f.get("risk_level") == "HIGH")
 
         # Text embedded for semantic search — describes what this run was
         summary_text = (
@@ -207,7 +206,9 @@ class ContentPatternsStore:
                 with_vectors=False,
             )
         except Exception as exc:
-            print(f"[ContentPatternsStore] Scroll failed: {exc} — using cold-start fallback")
+            print(
+                f"[ContentPatternsStore] Scroll failed: {exc} — using cold-start fallback"
+            )
             return _COLD_START_MESSAGE
 
         if not results:
@@ -248,9 +249,7 @@ class ContentPatternsStore:
             revisions = stats["revision_counts"]
             avg_score = sum(scores) / len(scores) if scores else None
             avg_revisions = sum(revisions) / len(revisions) if revisions else 0
-            success_rate = (
-                f"{stats['success_count']}/{stats['count']} published"
-            )
+            success_rate = f"{stats['success_count']}/{stats['count']} published"
             score_str = (
                 f"avg brand score {avg_score:.0%}" if avg_score is not None else ""
             )
@@ -347,7 +346,8 @@ class ContentPatternsStore:
 
         # Keep only successful runs
         successful = [
-            pt for pt in results
+            pt
+            for pt in results
             if (pt.payload or {}).get("distribution_status") in ("published", "partial")
         ]
 

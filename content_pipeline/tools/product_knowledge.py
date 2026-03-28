@@ -6,25 +6,29 @@ details, feature specs, and internal positioning that isn't in the LLM's weights
 
 Populated via the ingest_docs.py CLI (PDF, DOCX, CSV, TXT, MD files).
 """
+
 from __future__ import annotations
 
 import uuid as _uuid
 
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from qdrant_client import QdrantClient, models
+from qdrant_client import models
 
+from content_pipeline.tools.retriever import (
+    get_hf_tokenizer,
+    get_qdrant_client,
+    get_langchain_hf_embedding,
+)
 from content_pipeline.core.settings import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
-    EMBEDDING_NAME,
-    QDRANT_URL,
 )
 
 PRODUCT_KNOWLEDGE_COLLECTION = "product_knowledge"
 
-_embedding = HuggingFaceEmbeddings(model_name=EMBEDDING_NAME)
-_splitter = RecursiveCharacterTextSplitter(
+_embedding = get_langchain_hf_embedding()
+_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+    get_hf_tokenizer(),
     chunk_size=CHUNK_SIZE,
     chunk_overlap=CHUNK_OVERLAP,
 )
@@ -44,7 +48,7 @@ class ProductKnowledgeStore:
     """
 
     def __init__(self) -> None:
-        self.client = QdrantClient(url=QDRANT_URL)
+        self.client = get_qdrant_client()
 
     def _ensure_collection(self) -> None:
         """Create product_knowledge collection if it doesn't exist."""
@@ -167,14 +171,18 @@ class ProductKnowledgeStore:
         try:
             results, _ = self.client.scroll(
                 collection_name=PRODUCT_KNOWLEDGE_COLLECTION,
-                scroll_filter=models.Filter(
-                    must=[
-                        models.FieldCondition(
-                            key="company_id",
-                            match=models.MatchValue(value=company_id),
-                        )
-                    ]
-                ) if company_id != "default" else None,
+                scroll_filter=(
+                    models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="company_id",
+                                match=models.MatchValue(value=company_id),
+                            )
+                        ]
+                    )
+                    if company_id != "default"
+                    else None
+                ),
                 limit=1000,
                 with_payload=True,
                 with_vectors=False,
