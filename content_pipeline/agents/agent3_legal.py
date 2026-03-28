@@ -161,7 +161,6 @@ def _evaluate_claims_sequential(
                     regulatory_context=regulatory_context,
                 )
             ),
-            AIMessage(content="<think>\n</think>\n"),
         ]
 
         response = llm.invoke(messages)

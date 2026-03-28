@@ -28,6 +28,10 @@ from content_pipeline.core import audit
 from content_pipeline.core.settings import MAX_BRAND_REVISIONS, MAX_LEGAL_REVISIONS
 from content_pipeline.core.state import ContentState
 
+from phoenix.otel import register
+
+tracer_provider = register(project_name="content-shield", auto_instrument=True)
+
 # ── Profile loader node ───────────────────────────────────────────────────────
 
 
@@ -108,6 +112,7 @@ _RAZORPAY_DEMO_PROFILE = {
         "Voice: second person — address the merchant directly. "
         "Always lead with business outcome, not the feature name."
     ),
+    "brand_colors": {"primary": "#072654", "secondary": "#2175ce"},
 }
 
 

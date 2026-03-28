@@ -52,3 +52,5 @@ Pillow>=10.0.0
 
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv>=1.0.0
+arize-phoenix
+openinference-instrumentation-langchain

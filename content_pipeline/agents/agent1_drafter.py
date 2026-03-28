@@ -35,7 +35,9 @@ from content_pipeline.tools.retriever import Retriever
 _retriever = Retriever()
 
 
-def _fetch_proactive_constraints(brief: str, content_type: str, industry: str = "") -> str:
+def _fetch_proactive_constraints(
+    brief: str, content_type: str, industry: str = ""
+) -> str:
     """
     Retrieve top regulatory constraints BEFORE drafting so Agent 1
     writes compliant content from the start.
@@ -58,6 +60,7 @@ Always respond with valid JSON only. No preamble, no markdown fences.
 def _build_system_prompt(profile_fields: dict) -> str:
     industry = profile_fields.get("industry", "enterprise")
     return _SYSTEM_PROMPT_TEMPLATE.format(industry=industry)
+
 
 _DRAFT_PROMPT = """\
 <company_identity>
@@ -241,6 +244,13 @@ _CHANNEL_INSTRUCTIONS = {
         "Include 1-2 hashtags.\n"
         "Lead with the most compelling point."
     ),
+    "instagram": (
+        "Structure: Hook line (one sentence that grabs attention) → 1-2 short paragraphs (max 2 sentences each) → "
+        "CTA in caption (e.g., 'Tap the link in bio' or 'Comment below') → Optional: emojis for emphasis.\n"
+        "Length: 100-150 words.\n"
+        "Tone: Friendly, visually engaging, and conversational. Avoid long blocks of text.\n"
+        "Include 3-5 relevant hashtags at the end."
+    ),
 }
 
 # ── Profile helpers ───────────────────────────────────────────────────────────
@@ -335,7 +345,6 @@ def _generate_short_form(
                     previous_feedback=feedback,
                 )
             ),
-            AIMessage(content="<think>\n</think>\n"),
         ]
 
     response = llm.invoke(messages)
@@ -366,7 +375,6 @@ def _generate_blog_outline(
                 brief=state["brief"],
             )
         ),
-        AIMessage(content="<think>\n</think>\n"),
     ]
     response = llm.invoke(messages)
     raw = response.content.strip()
@@ -408,7 +416,6 @@ def _generate_blog_sections(
                     word_target=section.get("word_target", 180),
                 )
             ),
-            AIMessage(content="<think>\n</think>\n"),
         ]
         response = llm.invoke(messages)
         raw = response.content.strip()
@@ -529,7 +536,9 @@ def agent1_drafter(state: ContentState) -> ContentState:
 
     else:
         # ── Short-form path (LinkedIn, email, Twitter) ────────────────────────
-        regulatory_context = _fetch_proactive_constraints(state["brief"], channel, profile_fields["industry"])
+        regulatory_context = _fetch_proactive_constraints(
+            state["brief"], channel, profile_fields["industry"]
+        )
         draft = _generate_short_form(state, profile_fields, regulatory_context, llm)
         print("Drafting Complete.")
         pprint.pprint(
