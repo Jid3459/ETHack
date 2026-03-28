@@ -85,30 +85,6 @@ def _extract_headline(draft: str, llm) -> str:
         return " ".join(words)
 
 
-# ── Brand color extraction ─────────────────────────────────────────────────────
-
-
-def _brand_colors(
-    profile: dict, platform: str
-) -> tuple[tuple[int, int, int], tuple[int, int, int]] | None:
-    """
-    Pull optional brand_colors from company profile.
-    Expected format in profile:
-      "brand_colors": {"primary": "#0077B5", "secondary": "#00A0DC"}
-    Returns (top_rgb, bottom_rgb) or None to use platform defaults.
-    """
-    colors = profile.get("brand_colors")
-    if not colors:
-        return None
-    try:
-        def _hex(h: str) -> tuple[int, int, int]:
-            h = h.lstrip("#")
-            return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
-        return (_hex(colors["primary"]), _hex(colors["secondary"]))
-    except (KeyError, ValueError):
-        return None
-
-
 # ── LangGraph node ─────────────────────────────────────────────────────────────
 
 
@@ -166,11 +142,12 @@ def agent6_image_generator(state: ContentState) -> ContentState:
     draft = state.get("current_draft", "")
     profile = state.get("company_profile") or {}
     company_name = profile.get("name", state.get("company_id", ""))
+    tagline = profile.get("industry", "")
     run_id = state["run_id"]
 
-    # Extract one headline for all platforms (same approved draft)
+    # Extract one punchy ALL-CAPS headline from the approved draft
     headline = _extract_headline(draft, llm)
-    print(f"  [image_generator] Headline: {headline!r}")
+    print(f"  [image_generator] Headline extracted: {headline!r}")
 
     generated: dict[str, str] = {}
     failed: list[str] = []
@@ -178,21 +155,32 @@ def agent6_image_generator(state: ContentState) -> ContentState:
     for platform in target_platforms:
         try:
             output_path = IMAGE_OUTPUT_DIR / f"{run_id}_{platform}.png"
-            colors = _brand_colors(profile, platform)
             render_image(
                 platform=platform,
                 headline=headline,
                 company_name=company_name,
                 output_path=output_path,
-                brand_colors=colors,
+                tagline=tagline,
+                profile=profile,
             )
             generated[platform] = str(output_path)
-            print(f"  [image_generator] Saved {platform} image → {output_path}")
+            print(f"  [image_generator] [{platform}] Saved -> {output_path}")
         except Exception as exc:
-            print(f"  [image_generator] ERROR generating {platform} image: {exc}")
+            print(f"  [image_generator] [{platform}] ERROR: {exc}")
             failed.append(platform)
 
-    print(f"Image Generation Complete. Generated: {list(generated.keys())}")
+    # ── Summary output ────────────────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    print("IMAGE GENERATION COMPLETE")
+    print(f"  Headline  : {headline}")
+    print(f"  Company   : {company_name}  |  {tagline}")
+    print(f"  Platforms : {', '.join(generated.keys()) or 'none'}")
+    print(f"  Output dir: {IMAGE_OUTPUT_DIR}")
+    for platform, path in generated.items():
+        print(f"    [{platform}] {path}")
+    if failed:
+        print(f"  Failed    : {', '.join(failed)}")
+    print("=" * 60 + "\n")
 
     return {
         **state,

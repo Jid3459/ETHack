@@ -21,6 +21,9 @@ from content_pipeline.core import audit
 from content_pipeline.core.llm_client import get_llm
 from content_pipeline.core.state import ContentState
 from content_pipeline.core.utils import clean_llm_response
+from content_pipeline.tools.content_patterns import ContentPatternsStore
+
+_patterns_store = ContentPatternsStore()
 
 # ── Prompt templates ──────────────────────────────────────────────────────────
 
@@ -84,22 +87,16 @@ Return JSON matching this exact structure:
 
 def _load_engagement_history(company_id: str) -> str:
     """
-    Fetch recent content patterns from Qdrant content_patterns collection.
-    Returns a formatted summary string for the prompt.
+    Fetch recent content patterns from the Qdrant content_patterns collection.
 
-    In production this queries Qdrant. Here we return a realistic
-    pre-seeded summary that works immediately for Razorpay demo.
+    On first run (cold start) the collection will be empty for this company —
+    ContentPatternsStore.load_engagement_history() returns a generic best-practice
+    fallback string so Agent 0 still has reasonable priors to work from.
+
+    After each completed pipeline run, Agent 5 writes a record to the collection,
+    so from the second run onwards this reflects the company's actual history.
     """
-    # TODO replace stub with real Qdrant query against
-    # content_patterns collection once Agent 6 starts writing data.
-    return (
-        "LinkedIn posts about merchant product features: avg 3.1x baseline engagement. "
-        "Best day: Tuesday 9am IST. "
-        "Blog articles on technical explainers: strong SEO traction, 2.4x avg. "
-        "Email newsletters: 38% open rate when sent Thursday afternoon. "
-        "Instagram posts: below baseline for B2B content, not recommended. "
-        "Twitter: moderate, 1.2x baseline for product announcements only."
-    )
+    return _patterns_store.load_engagement_history(company_id)
 
 
 # ── Node function ─────────────────────────────────────────────────────────────

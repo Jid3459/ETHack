@@ -52,3 +52,10 @@ Pillow>=10.0.0
 
 # ── Config ────────────────────────────────────────────────────────────────────
 python-dotenv>=1.0.0
+
+# ── Trending context (Priority 1) — free, no API key ─────────────────────────
+duckduckgo-search>=6.0.0  # also works as: pip install ddgs
+
+# ── Document ingestion (Priority 2) — free ───────────────────────────────────
+python-docx>=1.0.0
+# pymupdf already listed above for PDF parsing
