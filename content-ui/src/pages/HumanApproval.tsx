@@ -14,7 +14,7 @@ const T = {
   surface:   '#0c0f1a',
   card:      '#111827',
   cardHover: '#131c2e',
-  border:    '#1e2d45',
+  border:    '#253050',                  // was '#1e2d45' — brighter
   borderGlow:'#3b82f6',
   accent:    '#3b82f6',
   accentGlow:'rgba(59,130,246,0.15)',
@@ -26,11 +26,12 @@ const T = {
   redDim:    'rgba(239,68,68,0.12)',
   purple:    '#8b5cf6',
   cyan:      '#06b6d4',
-  text:      '#f0f4ff',
-  sub:       '#6b7a99',
-  dim:       '#1a2540',
+  text:      '#eef0f8',                  // was '#f0f4ff'
+  sub:       '#9aaac4',                  // was '#6b7a99'
+  dim:       '#354060',                  // was '#1a2540'
   mono:      "'JetBrains Mono','Fira Code',monospace",
 }
+
 
 // ── Severity helpers ────────────────────────────────────────────────────────────
 const sevColor = (l: 'high'|'medium'|'low') =>

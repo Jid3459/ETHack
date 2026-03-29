@@ -8,19 +8,18 @@ type Tab = 'form' | 'url' | 'demo'
 
 // Design tokens — shared across all pages
 const D = {
-  card: 'rgba(8,10,22,0.75)',
-  border: 'rgba(255,255,255,0.07)',
-  borderAccent: 'rgba(59,130,246,0.28)',
-  accent: '#3b82f6',
-  purple: '#8b5cf6',
-  cyan: '#06b6d4',
-  green: '#10b981',
-  red: '#ef4444',
-  text: '#e8eaf0',
-  sub: '#64748b',
-  dim: '#2a3050',
+  card:         'rgba(8,10,22,0.78)',
+  border:       'rgba(255,255,255,0.1)',  // was 0.07
+  borderAccent: 'rgba(59,130,246,0.32)',
+  accent:       '#3b82f6',
+  purple:       '#8b5cf6',
+  cyan:         '#06b6d4',
+  green:        '#10b981',
+  red:          '#ef4444',
+  text:         '#eef0f8',               // was '#e8eaf0'
+  sub:          '#9aaac4',               // was '#64748b'
+  dim:          '#5a6a8a',               // was '#2a3050'
 }
-
 const inputStyle: React.CSSProperties = {
   width: '100%',
   backgroundColor: 'rgba(4,5,12,0.8)',

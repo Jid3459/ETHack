@@ -1,58 +1,102 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { startRun } from '../api/client'
 import { useApp } from '../context/AppContext'
+import KnowledgeUploader from '../components/KnowledgeUploader'
+import { ABToggle } from '../components/ABVariantPanel'
+
+const BASE = 'http://localhost:8001'
 
 const D = {
-  card: 'rgba(8,10,22,0.75)',
-  border: 'rgba(255,255,255,0.07)',
-  borderAccent: 'rgba(59,130,246,0.28)',
-  accent: '#3b82f6',
-  purple: '#8b5cf6',
-  cyan: '#06b6d4',
-  text: '#e8eaf0',
-  sub: '#64748b',
+  card:         'rgba(8,10,22,0.78)',
+  border:       'rgba(255,255,255,0.1)',   // was 0.07
+  borderAccent: 'rgba(59,130,246,0.32)',
+  accent:       '#3b82f6',
+  purple:       '#8b5cf6',
+  cyan:         '#06b6d4',
+  text:         '#eef0f8',                // was '#e8eaf0'
+  sub:          '#9aaac4',                // was '#64748b'
+  dim:          '#5a6a8a',               // was not present — add this
 }
 
-const CHANNELS = ['LinkedIn', 'Twitter', 'Blog', 'Email', 'Instagram']
+const CHANNELS      = ['LinkedIn', 'Twitter', 'Blog', 'Email', 'Instagram']
 const CONTENT_TYPES = ['Post', 'Article', 'Newsletter', 'Ad Copy', 'Press Release']
-const LANGUAGES = ['en', 'hi', 'ta', 'te', 'bn']
-const AUDIENCE_PRESETS = [
-  'SMB merchants',
-  'First-time investors',
-  'Enterprise finance teams',
-  'Startup founders',
-  'Retail consumers',
-]
+const LANGUAGES     = ['en', 'hi', 'ta', 'te', 'bn']
 const LANGUAGE_LABELS: Record<string, string> = {
   en: 'English', hi: 'Hindi', ta: 'Tamil', te: 'Telugu', bn: 'Bengali',
 }
 
 export default function BriefInput() {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
   const { companyId, companyName, setRunId } = useApp()
 
-  const [brief, setBrief] = useState('')
-  const [channel, setChannel] = useState('LinkedIn')
-  const [contentType, setContentType] = useState('Post')
-  const [targetAudience, setTargetAudience] = useState('')
-  const [languages, setLanguages] = useState<string[]>(['en'])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [brief,        setBrief]       = useState('')
+  const [channel,      setChannel]     = useState('LinkedIn')
+  const [contentType,  setContentType] = useState('Post')
+  const [languages,    setLanguages]   = useState<string[]>(['en'])
+  const [loading,      setLoading]     = useState(false)
+  const [error,        setError]       = useState('')
+  const [abMode,       setAbMode]      = useState(false)
 
-  const toggleLanguage = (lang: string) =>
-    setLanguages(prev => prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang])
+  const toggleLang = (l: string) =>
+    setLanguages(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l])
 
   const handleSubmit = async () => {
     if (!brief.trim()) { setError('Please enter a content brief.'); return }
-    if (!companyId) { setError('No company loaded. Go back to Onboarding.'); return }
+    if (!companyId)    { setError('No company loaded. Go to Onboarding first.'); return }
     setLoading(true); setError('')
+
     try {
-      const res = await startRun({ company_id: companyId, brief, channel, content_type: contentType, target_languages: languages })
-      setRunId(res.run_id)
-      navigate('/pipeline')
-    } catch { setError('Failed to start pipeline. Make sure the backend is running.') }
-    finally { setLoading(false) }
+      if (abMode) {
+        // ── A/B variant run ──────────────────────────────────────────────
+        const res = await fetch(`${BASE}/run/variants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_id: companyId,
+            brief,
+            channel: channel.toLowerCase(),
+            content_type: contentType.toLowerCase(),
+            target_languages: languages,
+          }),
+        }).then(r => r.json())
+
+        if (res.variant_a?.run_id) {
+          // Store variant A as primary run in context; dashboard shows both
+          setRunId(res.variant_a.run_id)
+          // Also stash variant B run id in sessionStorage so Pipeline page can
+          // show "running A/B test" banner (optional enhancement)
+          sessionStorage.setItem('ab_variant_b', res.variant_b.run_id)
+          sessionStorage.setItem('ab_group_id', res.ab_group_id)
+          navigate('/pipeline')
+        } else {
+          setError('Failed to start A/B run. Check the backend.')
+        }
+      } else {
+        // ── Standard single run ──────────────────────────────────────────
+        const res = await fetch(`${BASE}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_id: companyId,
+            brief,
+            channel: channel.toLowerCase(),
+            content_type: contentType.toLowerCase(),
+            target_languages: languages,
+          }),
+        }).then(r => r.json())
+
+        if (res.run_id) {
+          setRunId(res.run_id)
+          navigate('/pipeline')
+        } else {
+          setError('Failed to start pipeline. Make sure the backend is running.')
+        }
+      }
+    } catch (e) {
+      setError('Failed to reach backend. Make sure uvicorn is running on port 8001.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const chip = (active: boolean, accent = D.accent): React.CSSProperties => ({
@@ -63,6 +107,8 @@ export default function BriefInput() {
     fontWeight: active ? 700 : 400,
     transition: 'all 0.18s',
   })
+
+  const canSubmit = !loading && !!brief.trim() && !!companyId
 
   return (
     <>
@@ -77,18 +123,17 @@ export default function BriefInput() {
       <div style={{ maxWidth: 700, margin: '0 auto', animation: 'fadeUp 0.5s ease both', fontFamily: "'DM Sans', sans-serif" }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{
               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
               background: 'linear-gradient(135deg, rgba(59,130,246,0.22), rgba(139,92,246,0.22))',
               border: `1px solid ${D.borderAccent}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
             }}>✦</div>
-            <h1 style={{
-              color: D.text, fontSize: 26, fontWeight: 800, margin: 0,
-              letterSpacing: '-0.03em', fontFamily: "'Syne', sans-serif",
-            }}>New Content</h1>
+            <h1 style={{ color: D.text, fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: '-0.03em', fontFamily: "'Syne', sans-serif" }}>
+              New Content
+            </h1>
           </div>
           <p style={{ color: D.sub, fontSize: 13.5, margin: 0, paddingLeft: 46 }}>
             {companyName
@@ -97,15 +142,15 @@ export default function BriefInput() {
           </p>
         </div>
 
-        {/* Main card */}
+        {/* ── Knowledge Uploader (collapsible) ── */}
+        <KnowledgeUploader companyId={companyId} />
+
+        {/* ── Main card ── */}
         <div style={{
-          background: D.card,
-          backdropFilter: 'blur(20px)',
-          border: `1px solid ${D.border}`,
-          borderRadius: 18,
-          padding: 28,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
-          display: 'flex', flexDirection: 'column', gap: 24,
+          background: D.card, backdropFilter: 'blur(20px)',
+          border: `1px solid ${D.border}`, borderRadius: 18,
+          padding: 26, boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
+          display: 'flex', flexDirection: 'column', gap: 22, marginTop: 8,
         }}>
 
           {/* Brief */}
@@ -134,7 +179,7 @@ export default function BriefInput() {
 
           {/* Channel */}
           <div>
-            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Channel
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -146,7 +191,7 @@ export default function BriefInput() {
 
           {/* Content Type */}
           <div>
-            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Content Type
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -158,12 +203,12 @@ export default function BriefInput() {
 
           {/* Languages */}
           <div>
-            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', color: D.sub, fontSize: 10.5, fontWeight: 600, marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Target Languages
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {LANGUAGES.map(l => (
-                <button key={l} className="chip-btn" style={chip(languages.includes(l), D.cyan)} onClick={() => toggleLanguage(l)}>
+                <button key={l} className="chip-btn" style={chip(languages.includes(l), D.cyan)} onClick={() => toggleLang(l)}>
                   {LANGUAGE_LABELS[l]}
                 </button>
               ))}
@@ -173,7 +218,7 @@ export default function BriefInput() {
           {/* Summary strip */}
           <div style={{
             background: 'rgba(255,255,255,0.02)', border: `1px solid ${D.border}`,
-            borderRadius: 10, padding: '13px 16px',
+            borderRadius: 10, padding: '12px 16px',
             display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
           }}>
             {[
@@ -189,6 +234,9 @@ export default function BriefInput() {
             ))}
           </div>
 
+          {/* ── A/B Toggle ── */}
+          <ABToggle enabled={abMode} onToggle={setAbMode} />
+
           {/* Error */}
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 9, padding: '10px 14px', color: '#fca5a5', fontSize: 13 }}>
@@ -200,22 +248,51 @@ export default function BriefInput() {
           <button
             className="run-btn"
             onClick={handleSubmit}
-            disabled={loading || !brief.trim()}
+            disabled={!canSubmit}
             style={{
               width: '100%', padding: '14px',
-              background: loading || !brief.trim()
+              background: !canSubmit
                 ? 'rgba(20,24,40,0.6)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
-              color: loading || !brief.trim() ? '#2a3050' : '#fff',
+                : abMode
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)'
+                  : 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+              color: !canSubmit ? '#2a3050' : '#fff',
               border: 'none', borderRadius: 12,
               fontSize: 14, fontWeight: 700,
-              cursor: loading || !brief.trim() ? 'not-allowed' : 'pointer',
+              cursor: !canSubmit ? 'not-allowed' : 'pointer',
               transition: 'all 0.22s', letterSpacing: '0.02em',
-              boxShadow: loading || !brief.trim() ? 'none' : '0 0 0 1px rgba(99,102,241,0.3)',
+              boxShadow: !canSubmit ? 'none' : '0 0 0 1px rgba(99,102,241,0.3)',
             }}
           >
-            {loading ? 'Starting pipeline…' : 'Run Content Pipeline →'}
+            {loading
+              ? (abMode ? 'Generating A/B variants…' : 'Starting pipeline…')
+              : abMode
+                ? 'Generate A/B Variants →'
+                : 'Run Content Pipeline →'}
           </button>
+
+          {abMode && !loading && (
+            <div style={{
+              display: 'flex', gap: 8, justifyContent: 'center',
+              marginTop: -14,
+            }}>
+              {[
+                { label: 'A', desc: 'Data-led', color: D.accent },
+                { label: 'B', desc: 'Story-led', color: D.purple },
+              ].map(v => (
+                <div key={v.label} style={{
+                  display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: D.sub,
+                }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 4, background: v.color,
+                    color: '#fff', fontSize: 9, fontWeight: 900,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{v.label}</div>
+                  {v.desc} angle
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -10,7 +10,7 @@ const D = {
   bg:      '#04050c',
   surface: '#080a16',
   card:    '#0c0f1e',
-  border:  'rgba(255,255,255,0.07)',
+  border:  'rgba(255,255,255,0.1)',      // was 0.07
   accent:  '#3b82f6',
   green:   '#10b981',
   amber:   '#f59e0b',
@@ -19,9 +19,9 @@ const D = {
   cyan:    '#06b6d4',
   pink:    '#ec4899',
   teal:    '#14b8a6',
-  muted:   '#2a3050',
-  text:    '#e8eaf0',
-  sub:     '#64748b',
+  muted:   '#5a6a8a',                    // was '#2a3050'
+  text:    '#eef0f8',                    // was '#e8eaf0'
+  sub:     '#9aaac4',                    // was '#8896b0'
   mono:    "'JetBrains Mono', 'Fira Code', monospace",
 }
 

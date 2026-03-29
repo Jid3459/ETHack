@@ -5,6 +5,7 @@ import Navbar from './components/layout/Navbar'
 import ClickSpark from './components/reactbits/ClickSpark'
 
 import LandingPage from './pages/LandingPage'
+import Dashboard from './pages/DashBoard' 
 import Onboarding from './pages/Onboarding'
 import BriefInput from './pages/BriefInput'
 import PipelineProgress from './pages/PipelineProgress'
@@ -95,7 +96,8 @@ export default function App() {
                 <Navbar />
                 <main style={{ maxWidth: 1152, margin: '0 auto', padding: '32px 24px 60px' }}>
                   <Routes>
-                    <Route path="/onboard" element={<Onboarding />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/onboard" element={<Onboarding />} />                    
                     <Route path="/brief" element={<BriefInput />} />
                     <Route path="/pipeline" element={<PipelineProgress />} />
                     <Route path="/approve" element={<HumanApproval />} />
