@@ -143,14 +143,14 @@ def _translate_with_sarvam(text: str, target_lang: str) -> str:
 
     # Sarvam instruction prompt
     prompt = """<start_of_turn>user
-Translate the following English text to {lang_name}.
-For financial and technical terms, use transliteration not literal translation.
-Output only the translated text, nothing else.\n\n
+Translate the following English text to {lang_name}:
 
-Text: {text}\n\n
+{text}\n\n
 <end_of_turn>
 <start_of_turn>model
-""".format(lang_name=lang_name, text=text)
+""".format(
+        lang_name=lang_name, text=text
+    )
 
     try:
         output = model(
