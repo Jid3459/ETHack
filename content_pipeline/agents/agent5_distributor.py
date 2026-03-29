@@ -27,10 +27,25 @@ _patterns_store = ContentPatternsStore()
 # ── Channel credentials (loaded from env) ─────────────────────────────────────
 
 _BUFFER_ACCESS_TOKEN = os.getenv("BUFFER_ACCESS_TOKEN", "")
-_BUFFER_PROFILE_IDS: dict[str, str] = {
+_BUFFER_CHANNEL_IDS: dict[str, str] = {
     "linkedin": os.getenv("BUFFER_LINKEDIN_PROFILE_ID", ""),
     "twitter": os.getenv("BUFFER_TWITTER_PROFILE_ID", ""),
 }
+_BUFFER_GRAPHQL_URL = "https://api.buffer.com/graphql"
+_BUFFER_CREATE_POST_MUTATION = """
+mutation CreatePost($input: CreatePostInput!) {
+  createPost(input: $input) {
+    ... on PostActionSuccess {
+      post { id status text }
+    }
+    ... on InvalidInputError { message }
+    ... on UnauthorizedError { message }
+    ... on LimitReachedError { message }
+    ... on UnexpectedError { message }
+    ... on RestProxyError { message }
+  }
+}
+"""
 
 _WORDPRESS_URL = os.getenv("WORDPRESS_URL", "")
 _WORDPRESS_USER = os.getenv("WORDPRESS_USER", "")
@@ -48,9 +63,9 @@ def _publish_to_buffer(
     platform: str,
     scheduled_at: str | None,
 ) -> DistributionReceipt:
-    """Publish or schedule a post via Buffer API."""
-    profile_id = _BUFFER_PROFILE_IDS.get(platform, "")
-    if not profile_id or not _BUFFER_ACCESS_TOKEN:
+    """Publish or schedule a post via Buffer GraphQL API."""
+    channel_id = _BUFFER_CHANNEL_IDS.get(platform, "")
+    if not channel_id or not _BUFFER_ACCESS_TOKEN:
         return DistributionReceipt(
             channel=platform,
             platform_id="",
@@ -59,23 +74,66 @@ def _publish_to_buffer(
             error="Buffer credentials not configured",
         )
 
-    payload: dict = {
-        "text": content,
-        "profile_ids": [profile_id],
-    }
+    # Use customScheduled mode if a scheduled_at time is provided, else shareNow
     if scheduled_at:
-        payload["scheduled_at"] = scheduled_at
+        mode = "customScheduled"
+        variables: dict = {
+            "input": {
+                "channelId": channel_id,
+                "text": content,
+                "schedulingType": "automatic",
+                "mode": mode,
+                "dueAt": scheduled_at,
+            }
+        }
+    else:
+        variables = {
+            "input": {
+                "channelId": channel_id,
+                "text": content,
+                "schedulingType": "automatic",
+                "mode": "shareNow",
+            }
+        }
 
     try:
         resp = requests.post(
-            "https://api.bufferapp.com/1/updates/create.json",
-            headers={"Authorization": f"Bearer {_BUFFER_ACCESS_TOKEN}"},
-            json=payload,
+            _BUFFER_GRAPHQL_URL,
+            headers={
+                "Authorization": f"Bearer {_BUFFER_ACCESS_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            json={"query": _BUFFER_CREATE_POST_MUTATION, "variables": variables},
             timeout=10,
         )
         resp.raise_for_status()
-        data = resp.json()
-        post_id = data.get("updates", [{}])[0].get("id", "unknown")
+        result = resp.json()
+
+        # Check for GraphQL-level errors
+        if "errors" in result:
+            error_msg = result["errors"][0].get("message", "Unknown GraphQL error")
+            return DistributionReceipt(
+                channel=platform,
+                platform_id="",
+                published_at=datetime.now(timezone.utc).isoformat(),
+                status="failed",
+                error=error_msg,
+            )
+
+        create_post = result.get("data", {}).get("createPost", {})
+
+        # Union error types from Buffer
+        if "message" in create_post:
+            return DistributionReceipt(
+                channel=platform,
+                platform_id="",
+                published_at=datetime.now(timezone.utc).isoformat(),
+                status="failed",
+                error=create_post["message"],
+            )
+
+        post = create_post.get("post", {})
+        post_id = post.get("id", "unknown")
         return DistributionReceipt(
             channel=platform,
             platform_id=post_id,
