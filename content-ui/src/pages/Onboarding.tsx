@@ -8,18 +8,18 @@ type Tab = "form" | "url" | "demo";
 
 // Design tokens — shared across all pages
 const D = {
-  card:         'rgba(8,10,22,0.78)',
-  border:       'rgba(255,255,255,0.1)',  // was 0.07
-  borderAccent: 'rgba(59,130,246,0.32)',
-  accent:       '#3b82f6',
-  purple:       '#8b5cf6',
-  cyan:         '#06b6d4',
-  green:        '#10b981',
-  red:          '#ef4444',
-  text:         '#eef0f8',               // was '#e8eaf0'
-  sub:          '#9aaac4',               // was '#64748b'
-  dim:          '#5a6a8a',               // was '#2a3050'
-}
+  card: "rgba(8,10,22,0.78)",
+  border: "rgba(255,255,255,0.1)", // was 0.07
+  borderAccent: "rgba(59,130,246,0.32)",
+  accent: "#3b82f6",
+  purple: "#8b5cf6",
+  cyan: "#06b6d4",
+  green: "#10b981",
+  red: "#ef4444",
+  text: "#eef0f8", // was '#e8eaf0'
+  sub: "#9aaac4", // was '#64748b'
+  dim: "#5a6a8a", // was '#2a3050'
+};
 const inputStyle: React.CSSProperties = {
   width: "100%",
   backgroundColor: "rgba(4,5,12,0.8)",
@@ -328,7 +328,7 @@ export default function Onboarding() {
                       fontFamily: "'Syne'",
                     }}
                   >
-                    Razorpay
+                    Payzen
                   </div>
                   <div style={{ color: D.sub, fontSize: 12 }}>
                     Fintech · Payment Gateway · India
@@ -419,7 +419,7 @@ export default function Onboarding() {
                   textAlign: "center",
                 }}
               >
-                Pre-built from real Razorpay brand data — run the full pipeline
+                Pre-built from real Payzen brand data — run the full pipeline
                 instantly
               </p>
             </div>
@@ -452,7 +452,7 @@ export default function Onboarding() {
                   <input
                     className="ob-input"
                     style={inputStyle}
-                    placeholder="Razorpay"
+                    placeholder="Payzen"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
@@ -602,7 +602,7 @@ export default function Onboarding() {
                 <input
                   className="ob-input"
                   style={inputStyle}
-                  placeholder="https://razorpay.com"
+                  placeholder="https://payzen.com"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                 />
@@ -671,7 +671,7 @@ export default function Onboarding() {
                   boxShadow: "0 0 20px rgba(59,130,246,0.3)",
                 }}
               >
-                Load Razorpay Demo →
+                Load Payzen Demo →
               </button>
             ) : (
               <button

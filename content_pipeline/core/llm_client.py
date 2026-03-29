@@ -90,7 +90,7 @@ def get_llm() -> BaseChatModel:
         return ChatGroq(
             model=GROQ_MODEL,
             temperature=0.7,
-            max_tokens=None,
+            max_tokens=1500,
             timeout=None,
             max_retries=2,
         )

@@ -1,9 +1,9 @@
 import { AuditResponse, StatusResponse } from "../types";
 
-export const MOCK_COMPANY_ID = "razorpay_demo";
-export const MOCK_COMPANY_NAME = "Razorpay";
+export const MOCK_COMPANY_ID = "payzen_demo";
+export const MOCK_COMPANY_NAME = "Payzen";
 
-const MOCK_DRAFT = `Razorpay Magic Checkout reduces payment drop-offs by up to 35%.
+const MOCK_DRAFT = `Payzen Magic Checkout reduces payment drop-offs by up to 35%.
 
 Pre-filled address, saved cards, and one-tap UPI — built for Indian consumers.
 
@@ -203,7 +203,7 @@ export const MOCK_AUDIT: AuditResponse = {
       timestamp: new Date(Date.now() - 300000).toISOString(),
       agent: "profile_loader",
       action: "Loaded company profile",
-      decision: "Loaded Razorpay profile with 4 banned words and 2 disclaimers",
+      decision: "Loaded Payzen profile with 4 banned words and 2 disclaimers",
     },
     {
       run_id: "",

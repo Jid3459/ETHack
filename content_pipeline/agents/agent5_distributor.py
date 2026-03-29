@@ -9,6 +9,7 @@ Reads from state:  localized_versions, confirmed_platforms,
                    strategy_card, scheduled_time, run_id
 Writes to state:   distribution_receipts, pipeline_complete
 """
+
 from __future__ import annotations
 
 import base64
@@ -62,6 +63,7 @@ _IMGBB_UPLOAD_URL = "https://api.imgbb.com/1/upload"
 
 # ── Image hosting (ImgBB) ─────────────────────────────────────────────────────
 
+
 def _upload_to_imgbb(file_path: str) -> str | None:
     """Upload a local image file to ImgBB and return the public URL, or None on failure."""
     if not _IMGBB_API_KEY:
@@ -87,6 +89,7 @@ def _upload_to_imgbb(file_path: str) -> str | None:
 
 
 # ── Channel publishers ────────────────────────────────────────────────────────
+
 
 def _publish_to_buffer(
     content: str,
@@ -299,6 +302,7 @@ def _publish_to_sendgrid(
 
 # ── Routing ───────────────────────────────────────────────────────────────────
 
+
 def _get_content_for_channel(
     platform: str,
     localized_versions: dict[str, str],
@@ -317,15 +321,16 @@ def _extract_blog_title(draft: str) -> str:
     return "New Article"
 
 
-def _extract_email_subject(draft: str) -> str:
+def _extract_email_subject(draft: str, company_name) -> str:
     """Try to extract subject line if email format is used."""
     for line in draft.splitlines():
         if line.lower().startswith("subject:"):
             return line.split(":", 1)[1].strip()
-    return "Update from Razorpay"
+    return f"Update from {company_name}"
 
 
 # ── Node function ─────────────────────────────────────────────────────────────
+
 
 def agent5_distributor(state: ContentState) -> ContentState:
     """
@@ -340,6 +345,8 @@ def agent5_distributor(state: ContentState) -> ContentState:
     generated_images: dict = state.get("generated_images", {})
 
     receipts: list[DistributionReceipt] = []
+
+    company_name = state.get("company_profile").get("name", "Company Name")
 
     for platform in platforms:
         content = _get_content_for_channel(platform, localized)
@@ -357,7 +364,7 @@ def agent5_distributor(state: ContentState) -> ContentState:
             receipt = _publish_to_wordpress(content, title, scheduled_at)
 
         elif platform == "email":
-            subject = _extract_email_subject(content)
+            subject = _extract_email_subject(content, company_name)
             receipt = _publish_to_sendgrid(content, subject, scheduled_at)
 
         else:
@@ -371,7 +378,9 @@ def agent5_distributor(state: ContentState) -> ContentState:
 
         # If credentials not configured, mark as simulated publish for demo
         # so content_patterns still accumulates learning data
-        if receipt["status"] == "failed" and "not configured" in (receipt.get("error") or ""):
+        if receipt["status"] == "failed" and "not configured" in (
+            receipt.get("error") or ""
+        ):
             receipt = DistributionReceipt(
                 channel=receipt["channel"],
                 platform_id=f"simulated-{state['run_id'][:8]}",
@@ -379,7 +388,9 @@ def agent5_distributor(state: ContentState) -> ContentState:
                 status="published",
                 error=None,
             )
-            print(f"[agent5_distributor] No credentials for {platform} — simulating publish for demo")
+            print(
+                f"[agent5_distributor] No credentials for {platform} — simulating publish for demo"
+            )
 
         receipts.append(receipt)
 
@@ -410,8 +421,11 @@ def agent5_distributor(state: ContentState) -> ContentState:
                     "failed": [f["channel"] for f in failed],
                     "pattern_written": True,
                     "receipts": [
-                        {"channel": r["channel"], "status": r["status"],
-                         "platform_id": r["platform_id"]}
+                        {
+                            "channel": r["channel"],
+                            "status": r["status"],
+                            "platform_id": r["platform_id"],
+                        }
                         for r in receipts
                     ],
                 },

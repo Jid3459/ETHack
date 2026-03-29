@@ -98,47 +98,60 @@ const CFG: Record<
     label: string;
     glow: string;
     text: string;
+    descColor: string;
+    nameColor: string;
   }
 > = {
   active: {
-    bg: "rgba(59,130,246,0.11)",
+    bg: "rgba(59,130,246,0.12)",
     border: "#3b82f6",
     dot: "#3b82f6",
     label: "#93c5fd",
     glow: "0 0 24px rgba(59,130,246,0.3)",
     text: "Running…",
+    descColor: "#7090c0",
+    nameColor: "#dde8ff",
   },
   passed: {
-    bg: "rgba(34,197,94,0.07)",
+    bg: "rgba(34,197,94,0.08)",
     border: "#22c55e",
     dot: "#22c55e",
     label: "#86efac",
-    glow: "0 0 16px rgba(34,197,94,0.18)",
+    glow: "0 0 16px rgba(34,197,94,0.2)",
     text: "Passed ✓",
+    descColor: "#6aaa88",
+    nameColor: "#d0f0de",
   },
   failed: {
-    bg: "rgba(239,68,68,0.09)",
+    bg: "rgba(239,68,68,0.10)",
     border: "#ef4444",
     dot: "#ef4444",
     label: "#fca5a5",
-    glow: "0 0 20px rgba(239,68,68,0.22)",
+    glow: "0 0 20px rgba(239,68,68,0.25)",
     text: "Needs revision",
+    descColor: "#b07070",
+    nameColor: "#ffd8d8",
   },
   waiting: {
-    bg: "rgba(245,158,11,0.09)",
+    bg: "rgba(245,158,11,0.10)",
     border: "#f59e0b",
     dot: "#f59e0b",
     label: "#fcd34d",
-    glow: "0 0 20px rgba(245,158,11,0.22)",
+    glow: "0 0 20px rgba(245,158,11,0.25)",
     text: "Awaiting you",
+    descColor: "#b09040",
+    nameColor: "#ffe8a0",
   },
+  // PENDING: was '#2a3050' (invisible) — now readable muted blue-grey
   pending: {
-    bg: "rgba(12,14,24,0.55)",
-    border: "#1a1f30",
-    dot: "#1a1f30",
-    label: "#2a3050",
+    bg: "rgba(12,14,26,0.6)",
+    border: "#252d48",
+    dot: "#354060",
+    label: "#5a6a8a",
     glow: "none",
     text: "Pending",
+    descColor: "#4a5a7a",
+    nameColor: "#6a7a9a",
   },
 };
 
@@ -149,7 +162,8 @@ const LC: Record<LogEntry["type"], { c: string; bar: string; bg: string }> = {
   error: { c: "#f87171", bar: "#ef4444", bg: "rgba(239,68,68,0.06)" },
   system: { c: "#a78bfa", bar: "#8b5cf6", bg: "rgba(139,92,246,0.06)" },
 };
-
+const LOG_OLD_TEXT = "#e0e4ed"; // non-active log entries
+const LOG_TIME_TEXT = "#5a6a8a"; // timestamps
 function classify(m: string): LogEntry["type"] {
   if (m.includes("complete") || m.includes("passed") || m.includes("published"))
     return "success";
@@ -347,10 +361,17 @@ export default function PipelineProgress() {
               </h1>
             </div>
             {/* FIXED: was '#dee3ef' (barely visible) → '#7a90b8' */}
-            <p style={{color:'#7a90b8',fontSize:13.5,margin:0}}>
-              {companyName
-                ? <>Processing for <span style={{color:'#3b82f6',fontWeight:600}}>{companyName}</span></>
-                : 'Processing content through the agent pipeline…'}
+            <p style={{ color: "#7a90b8", fontSize: 13.5, margin: 0 }}>
+              {companyName ? (
+                <>
+                  Processing for{" "}
+                  <span style={{ color: "#3b82f6", fontWeight: 600 }}>
+                    {companyName}
+                  </span>
+                </>
+              ) : (
+                "Processing content through the agent pipeline…"
+              )}
             </p>
           </div>
           <div
@@ -416,18 +437,40 @@ export default function PipelineProgress() {
               </div>
             </div>
             <div>
-              <div style={{color:'#eef0f8',fontSize:13,fontWeight:600}}>{passedCount}/{AGENTS.length} agents</div>
+              <div style={{ color: "#eef0f8", fontSize: 13, fontWeight: 600 }}>
+                {passedCount}/{AGENTS.length} agents
+              </div>
               {/* FIXED: was '#3a4560' → '#7a90b8' */}
-              <div style={{color:'#d6dce8',fontSize:11}}>
-                {status?.pipeline_complete ? 'Complete' : status?.status==='awaiting_human' ? 'Awaiting approval' : 'In progress'}
+              <div style={{ color: "#d6dce8", fontSize: 11 }}>
+                {status?.pipeline_complete
+                  ? "Complete"
+                  : status?.status === "awaiting_human"
+                    ? "Awaiting approval"
+                    : "In progress"}
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Progress bar ── */}
-        <div style={{height:2,background:'rgba(255,255,255,0.08)',borderRadius:2,marginBottom:24,overflow:'hidden'}}>
-          <div style={{height:'100%',width:`${progress}%`,background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',transition:'width 0.6s ease',boxShadow:'0 0 10px rgba(59,130,246,0.7)'}}/>
+        <div
+          style={{
+            height: 2,
+            background: "rgba(255,255,255,0.08)",
+            borderRadius: 2,
+            marginBottom: 24,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background: "linear-gradient(90deg,#3b82f6,#8b5cf6)",
+              transition: "width 0.6s ease",
+              boxShadow: "0 0 10px rgba(59,130,246,0.7)",
+            }}
+          />
         </div>
 
         <div
@@ -461,46 +504,88 @@ export default function PipelineProgress() {
                       background: cfg.bg,
                       border: `1px solid ${cfg.border}`,
                       borderRadius: 11,
-                      padding: '12px 16px',
-                      display: 'flex',
-                      alignItems: 'center',
+                      padding: "12px 16px",
+                      display: "flex",
+                      alignItems: "center",
                       gap: 12,
-                      boxShadow: state==='active'||state==='waiting' ? cfg.glow : 'none',
-                      backdropFilter: 'blur(8px)',
+                      boxShadow:
+                        state === "active" || state === "waiting"
+                          ? cfg.glow
+                          : "none",
+                      backdropFilter: "blur(8px)",
                     }}
                   >
                     {/* Index circle */}
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: 700,
-                      background: state==='pending' ? 'rgba(10,14,26,0.8)' : `${cfg.border}20`,
-                      border: `1px solid ${state==='pending' ? 'rgba(255,255,255,0.1)' : cfg.border}`,
-                      // FIXED: was '#1e2538' (invisible) for pending
-                      color: state==='pending' ? '#4a5a7a' : cfg.label,
-                    }}>
-                      {state==='passed' ? '✓' : idx+1}
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background:
+                          state === "pending"
+                            ? "rgba(10,14,26,0.8)"
+                            : `${cfg.border}20`,
+                        border: `1px solid ${state === "pending" ? "rgba(255,255,255,0.1)" : cfg.border}`,
+                        // FIXED: was '#1e2538' (invisible) for pending
+                        color: state === "pending" ? "#4a5a7a" : cfg.label,
+                      }}
+                    >
+                      {state === "passed" ? "✓" : idx + 1}
                     </div>
 
                     {/* Pulse or static dot */}
-                    {state==='active'||state==='waiting'
-                      ? <PulseDot color={cfg.dot}/>
-                      : <div style={{width:7,height:7,borderRadius:'50%',background:cfg.dot,flexShrink:0}}/>
-                    }
+                    {state === "active" || state === "waiting" ? (
+                      <PulseDot color={cfg.dot} />
+                    ) : (
+                      <div
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: cfg.dot,
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
 
                     {/* Icon */}
-                    <span style={{fontSize:14,color:cfg.label,flexShrink:0,opacity:state==='pending'?0.3:1}}>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        color: cfg.label,
+                        flexShrink: 0,
+                        opacity: state === "pending" ? 0.3 : 1,
+                      }}
+                    >
                       {agent.icon}
                     </span>
 
                     {/* Label + description */}
-                    <div style={{flex:1,minWidth:0}}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       {/* FIXED: pending name was '#2a3050' → now cfg.nameColor */}
-                      <div style={{color:cfg.nameColor,fontSize:13,fontWeight:600}}>
+                      <div
+                        style={{
+                          color: cfg.nameColor,
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }}
+                      >
                         {agent.label}
                       </div>
                       {/* FIXED: description was '#e5e6ef' (invisible) → cfg.descColor */}
-                      <div style={{color:cfg.descColor,fontSize:11,marginTop:1}}>
+                      <div
+                        style={{
+                          color: cfg.descColor,
+                          fontSize: 11,
+                          marginTop: 1,
+                        }}
+                      >
                         {agent.description}
                       </div>
                     </div>
@@ -605,97 +690,201 @@ export default function PipelineProgress() {
 
             {/* Complete banner */}
             {status?.pipeline_complete && (
-              <div style={{
-                background:'rgba(34,197,94,0.07)',border:'1px solid rgba(34,197,94,0.35)',
-                borderRadius:12,padding:'18px 20px',textAlign:'center',
-                boxShadow:'0 0 30px rgba(34,197,94,0.1)',backdropFilter:'blur(8px)',
-              }}>
-                <div style={{color:'#4ade80',fontSize:24,marginBottom:4}}>✓</div>
-                <div style={{color:'#86efac',fontSize:14,fontWeight:600}}>Content published successfully</div>
+              <div
+                style={{
+                  background: "rgba(34,197,94,0.07)",
+                  border: "1px solid rgba(34,197,94,0.35)",
+                  borderRadius: 12,
+                  padding: "18px 20px",
+                  textAlign: "center",
+                  boxShadow: "0 0 30px rgba(34,197,94,0.1)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <div
+                  style={{ color: "#4ade80", fontSize: 24, marginBottom: 4 }}
+                >
+                  ✓
+                </div>
+                <div
+                  style={{ color: "#86efac", fontSize: 14, fontWeight: 600 }}
+                >
+                  Content published successfully
+                </div>
                 {/* FIXED: was '#2a3050' → '#6a8a70' */}
-                <div style={{color:'#6a8a70',fontSize:12,marginTop:4}}>All agents completed</div>
+                <div style={{ color: "#6a8a70", fontSize: 12, marginTop: 4 }}>
+                  All agents completed
+                </div>
               </div>
             )}
           </div>
 
           {/* ── Live log ── */}
-          <div style={{
-            background:'rgba(6,8,16,0.92)',backdropFilter:'blur(16px)',
-            border:'1px solid rgba(255,255,255,0.1)',
-            borderRadius:12,overflow:'hidden',
-            position:'sticky',top:24,maxHeight:510,
-            display:'flex',flexDirection:'column',
-          }}>
+          <div
+            style={{
+              background: "rgba(6,8,16,0.92)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              overflow: "hidden",
+              position: "sticky",
+              top: 24,
+              maxHeight: 510,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             {/* Log header */}
-            <div style={{
-              padding:'9px 13px',
-              borderBottom:'1px solid rgba(255,255,255,0.08)',
-              display:'flex',alignItems:'center',justifyContent:'space-between',
-              background:'rgba(20,24,40,0.7)',flexShrink:0,
-            }}>
-              <div style={{display:'flex',alignItems:'center',gap:7}}>
-                <div style={{
-                  width:6,height:6,borderRadius:'50%',background:'#22c55e',
-                  boxShadow:'0 0 6px #22c55e',
-                  animation:status?.pipeline_complete?'none':'ppPing 1.5s ease infinite',
-                }}/>
+            <div
+              style={{
+                padding: "9px 13px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "rgba(20,24,40,0.7)",
+                flexShrink: 0,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: "#22c55e",
+                    boxShadow: "0 0 6px #22c55e",
+                    animation: status?.pipeline_complete
+                      ? "none"
+                      : "ppPing 1.5s ease infinite",
+                  }}
+                />
                 {/* FIXED: was '#3a4560' → '#7a90b8' */}
-                <span style={{color:'#e3e6ea',fontSize:10,fontWeight:700,letterSpacing:'0.1em'}}>LIVE LOG</span>
+                <span
+                  style={{
+                    color: "#e3e6ea",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  LIVE LOG
+                </span>
               </div>
               {/* FIXED: was '#1a1f30' (invisible) → '#4a5a7a' */}
-              <span style={{color:'#e3e5e9',fontSize:9,fontFamily:'monospace'}}>{logs.length} entries</span>
+              <span
+                style={{
+                  color: "#e3e5e9",
+                  fontSize: 9,
+                  fontFamily: "monospace",
+                }}
+              >
+                {logs.length} entries
+              </span>
             </div>
 
             {/* Log entries */}
-            <div style={{flex:1,overflowY:'auto',padding:'6px 0',display:'flex',flexDirection:'column',gap:1}}>
-              {logs.length===0 && (
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "6px 0",
+                display: "flex",
+                flexDirection: "column",
+                gap: 1,
+              }}
+            >
+              {logs.length === 0 && (
                 /* FIXED: was '#1a1f30' → '#4a5a7a' */
-                <div style={{color:'#4a5a7a',fontSize:11,fontFamily:'monospace',padding:'8px 13px'}}>
+                <div
+                  style={{
+                    color: "#4a5a7a",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    padding: "8px 13px",
+                  }}
+                >
                   Waiting for pipeline…
                 </div>
               )}
               {logs.map((entry, i) => {
-                const lc = LC[entry.type]
+                const lc = LC[entry.type];
                 return (
                   <div
                     key={entry.id}
                     className="pp-log"
                     style={{
-                      display:'flex',gap:7,alignItems:'flex-start',
-                      padding:'4px 13px',
-                      background: i===0 ? lc.bg : 'transparent',
-                      borderLeft: `2px solid ${i===0 ? lc.bar : 'transparent'}`,
+                      display: "flex",
+                      gap: 7,
+                      alignItems: "flex-start",
+                      padding: "4px 13px",
+                      background: i === 0 ? lc.bg : "transparent",
+                      borderLeft: `2px solid ${i === 0 ? lc.bar : "transparent"}`,
                     }}
                   >
                     {/* FIXED: timestamp was '#1e2538' → LOG_TIME_TEXT */}
-                    <span style={{color:LOG_TIME_TEXT,fontSize:9,fontFamily:'monospace',flexShrink:0,marginTop:1,minWidth:52}}>
+                    <span
+                      style={{
+                        color: LOG_TIME_TEXT,
+                        fontSize: 9,
+                        fontFamily: "monospace",
+                        flexShrink: 0,
+                        marginTop: 1,
+                        minWidth: 52,
+                      }}
+                    >
                       {entry.time}
                     </span>
                     {/* FIXED: old entries were '#2a3050' → LOG_OLD_TEXT */}
-                    <span style={{
-                      color: i===0 ? lc.c : LOG_OLD_TEXT,
-                      fontSize:10,fontFamily:'monospace',lineHeight:1.5,wordBreak:'break-word',
-                    }}>
+                    <span
+                      style={{
+                        color: i === 0 ? lc.c : LOG_OLD_TEXT,
+                        fontSize: 10,
+                        fontFamily: "monospace",
+                        lineHeight: 1.5,
+                        wordBreak: "break-word",
+                      }}
+                    >
                       {entry.msg}
                     </span>
                   </div>
-                )
+                );
               })}
             </div>
 
             {/* Draft preview */}
             {status?.draft_preview && (
-              <div style={{
-                borderTop:'1px solid rgba(255,255,255,0.08)',
-                padding:'9px 13px',
-                background:'rgba(139,92,246,0.06)',flexShrink:0,
-              }}>
+              <div
+                style={{
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                  padding: "9px 13px",
+                  background: "rgba(139,92,246,0.06)",
+                  flexShrink: 0,
+                }}
+              >
                 {/* FIXED: was '#3a2a60' (barely visible) → '#7a6aaa' */}
-                <div style={{color:'#7a6aaa',fontSize:9,fontWeight:700,letterSpacing:'0.1em',marginBottom:5}}>
+                <div
+                  style={{
+                    color: "#7a6aaa",
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    marginBottom: 5,
+                  }}
+                >
                   DRAFT PREVIEW
                 </div>
-                <div style={{color:'#8878b8',fontSize:10,fontStyle:'italic',lineHeight:1.6,fontFamily:'monospace'}}>
-                  {status.draft_preview.slice(0,150)}{status.draft_preview.length>150?'…':''}
+                <div
+                  style={{
+                    color: "#8878b8",
+                    fontSize: 10,
+                    fontStyle: "italic",
+                    lineHeight: 1.6,
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {status.draft_preview.slice(0, 150)}
+                  {status.draft_preview.length > 150 ? "…" : ""}
                 </div>
               </div>
             )}

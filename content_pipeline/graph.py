@@ -45,7 +45,7 @@ def profile_loader(state: ContentState) -> ContentState:
     # Use profile already in state (from /onboard), else fall back to demo/generic
     if state.get("company_profile"):
         profile = state["company_profile"]
-    elif company_id == "razorpay_demo":
+    elif company_id == "payzen_demo":
         profile = _RAZORPAY_DEMO_PROFILE
     else:
         profile = {
@@ -84,7 +84,7 @@ violations of specific brand rules.""",
 
 
 _RAZORPAY_DEMO_PROFILE = {
-    "name": "Razorpay",
+    "name": "Payzen",
     "industry": "Payment Aggregator / Fintech",
     "tone": "Professional but approachable. Direct. No jargon.",
     "brand_voice": (
@@ -93,12 +93,12 @@ _RAZORPAY_DEMO_PROFILE = {
     ),
     "required_disclaimers": [
         # "Terms and conditions apply",
-        # "Subject to eligibility and Razorpay's terms of service",
+        # "Subject to eligibility and Payzen's terms of service",
     ],
     "approved_terms": {
         "magic checkout": "Magic Checkout",
-        "razorpayx": "RazorpayX",
-        "razor pay": "Razorpay",
+        "payzenpayx": "PayzenX",
+        "payzen pay": "Payzen",
     },
     "banned_concepts": [
         "absolute fraud protection",

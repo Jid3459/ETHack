@@ -19,7 +19,9 @@ Writes to state:   current_draft, blog_outline, blog_sections,
 from __future__ import annotations
 
 import json
+from logging import exception
 import re
+import traceback
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
@@ -133,6 +135,10 @@ Return JSON:
 """
 
 _REVISION_PROMPT = """\
+<brief>
+{brief}
+</brief>
+
 <previous_draft>
 {previous_draft}
 </previous_draft>
@@ -149,6 +155,10 @@ _REVISION_PROMPT = """\
 {legal_flags}
 </legal_flags>
 
+<human_feedback>
+{human_feedback}
+</human_feedback>
+
 <task>
 You are making SURGICAL fixes to the draft above.
 
@@ -158,6 +168,7 @@ RULES:
 3. Do NOT rewrite sentences that have no violation
 4. Do NOT shorten the draft — maintain similar length
 5. Do NOT remove content that is not flagged
+6. Use the human feedback to improve upon the draft
 
 For each violation, replace only that phrase. Leave everything else identical.
 
@@ -297,13 +308,13 @@ _CHANNEL_INSTRUCTIONS = {
         "Write each section as instructed."
     ),
     "twitter": (
-        "Length: Under 280 characters.\n"
-        "Include 1-2 hashtags.\n"
+        "Length: Under 200 words.\n"
+        "Include 2-3 hashtags.\n"
         "Lead with the most compelling point."
     ),
     "instagram": (
         "Structure: Hook line (one sentence that grabs attention) → 1-2 short paragraphs (max 2 sentences each) → "
-        "CTA in caption (e.g., 'Tap the link in bio' or 'Comment below') → Optional: emojis for emphasis.\n"
+        "CTA in caption (e.g., 'Tap the link in bio', 'Learn more' or 'Comment below') → Optional: emojis for emphasis.\n"
         "Length: 100-150 words.\n"
         "Tone: Friendly, visually engaging, and conversational. Avoid long blocks of text.\n"
         "Include 3-5 relevant hashtags at the end."
@@ -542,7 +553,9 @@ def _generate_short_form(
             SystemMessage(content=_build_system_prompt(profile_fields)),
             HumanMessage(
                 content=_REVISION_PROMPT.format(
+                    brief=state.get("brief"),
                     previous_draft=state.get("current_draft", ""),
+                    human_feedback=state.get("human_feedback", ""),
                     violations_formatted=_format_violations_for_revision(
                         state.get("brand_violations", [])
                     ),
@@ -588,11 +601,12 @@ def _generate_short_form(
     response = llm.invoke(messages)
     raw = response.content.strip()
     raw = clean_llm_response(raw)
-
+    print("RAW_TEXT:", raw)
     try:
         parsed = json.loads(raw)
         return parsed.get("draft", raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        traceback.print_exc()
         return raw  # return raw text if JSON parse fails
 
 
@@ -617,6 +631,7 @@ def _generate_blog_outline(
     response = llm.invoke(messages)
     raw = response.content.strip()
     raw = clean_llm_response(raw)
+    print("RAW_TEXT", raw)
     try:
         return json.loads(raw)
     except json.JSONDecodeError:

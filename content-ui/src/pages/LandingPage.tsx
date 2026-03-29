@@ -474,7 +474,7 @@ export default function LandingPage() {
               Ready to shield your content?
             </h2>
             <p style={{ color: '#4a5568', fontFamily: "'DM Sans'", fontSize: 16, marginBottom: 32, position: 'relative' }}>
-              Start with the Razorpay demo or onboard your own brand in 60 seconds.
+              Start with the Payzen demo or onboard your own brand in 60 seconds.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', position: 'relative' }}>
               <button onClick={() => navigate('/onboard')} className="cta-primary" style={{
