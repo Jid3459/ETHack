@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { MOCK_AUDIT } from "../mock/mockServer";
 import { AuditEntry, AuditResponse, DistributionReceipt } from "../types";
+import { getAudit } from "../api/client";
+import { TextAlignCenter } from "lucide-react";
 
 const PHOENIX_URL = "http://localhost:6006";
 
@@ -69,98 +71,6 @@ function formatDate(iso: string) {
     year: "numeric",
   });
 }
-const sample_audit_trail: AuditResponse = {
-  run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-  entries: [
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "profile_loader",
-      timestamp: "2026-03-28T15:21:05.476724+00:00",
-      action: "profile_loaded",
-      decision: "pass",
-      detail: '{"company_id": "razorpay_demo"}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent0_strategy_advisor",
-      timestamp: "2026-03-28T15:21:12.999432+00:00",
-      action: "strategy_skipped_user_specified",
-      decision: "pass",
-      detail: '{"channel": "linkedin"}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent1_drafter",
-      timestamp: "2026-03-28T15:21:24.520374+00:00",
-      action: "short_form_drafted",
-      decision: "pass",
-      detail:
-        '{"channel": "linkedin", "revision_count": 1, "draft_length": 320, "target_audience": "default"}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent2_quality_guardian",
-      timestamp: "2026-03-28T15:21:25.383704+00:00",
-      action: "brand_compliance_checked",
-      decision: "pass",
-      detail:
-        '{"score": 0.85, "semantic_violations": 2, "seo_notes": "The draft is well-structured for LinkedIn and includes relevant hashtags. However, consider adding more specific keywords related to e-commerce and payment solutions to improve discoverability.", "threshold": 0.7}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent3_legal_reviewer",
-      timestamp: "2026-03-28T15:21:28.623117+00:00",
-      action: "legal_compliance_checked",
-      decision: "pass",
-      detail:
-        '{"claims_checked": 3, "high_flags": 0, "medium_flags": 0, "low_flags": 0, "citations": []}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "human_gate",
-      timestamp: "2026-03-28T16:48:29.725297+00:00",
-      action: "human_decision_received",
-      decision: "approve",
-      detail: '{"feedback": "string", "legal_flags_shown": 0}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent6_image_generator",
-      timestamp: "2026-03-28T16:48:37.401098+00:00",
-      action: "images_generated",
-      decision: "pass",
-      detail:
-        '{"data": {"headline": "Boost Cash Flow Instantly", "subtext": "Access funds in seconds and manage working capital efficiently", "cta": "Learn More", "logo": "brand_images/razorpay/logo.png", "background_image": "brand_images/razorpay/linkedin_background.png", "brand_colors": {"primary": "#072654", "secondary": "#2175ce"}}, "platforms_generated": ["linkedin"], "platforms_failed": [], "paths": {"linkedin": "C:\\\\d\\\\Taran\\\\College\\\\AY 2025-26\\\\ET Hackathon\\\\ETHack\\\\content_pipeline\\\\generated_images\\\\350c4106-53b2-4f7a-9399-5377c75bb9cb_linkedin.png"}}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent4_localizer",
-      timestamp: "2026-03-28T16:48:47.279741+00:00",
-      action: "localization_complete",
-      decision: "pass",
-      detail:
-        '{"languages_processed": ["en", "hi"], "sarvam_used": true, "fallback_to_llm_only": false}',
-    },
-    {
-      run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-      agent: "agent5_distributor",
-      timestamp: "2026-03-28T16:48:47.821865+00:00",
-      action: "distribution_complete",
-      decision: "pass",
-      detail:
-        '{"total_channels": 1, "successful": 1, "failed": [], "pattern_written": true, "receipts": [{"channel": "linkedin", "status": "published", "platform_id": "simulated-350c4106"}]}',
-    },
-  ],
-  distribution_receipts: [
-    {
-      channel: "linkedin",
-      platform_id: "simulated-350c4106",
-      published_at: "2026-03-28T16:48:47.287951+00:00",
-      status: "published",
-      error: null,
-    },
-  ],
-};
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({
   label,
@@ -563,10 +473,47 @@ function EntryRow({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AuditLog() {
-  const { companyName } = useApp();
+  const { runId, companyName } = useApp();
   const [filter, setFilter] = useState<string>("all");
 
-  const entries: AuditEntry[] = sample_audit_trail.entries;
+  const [entries, setEntries] = useState<AuditEntry[] | null>(null);
+  useEffect(() => {
+    if (!runId) return;
+
+    let intervalId: NodeJS.Timeout;
+
+    const poll = async () => {
+      try {
+        const audit_data = await getAudit(runId);
+        setEntries(audit_data.entries);
+      } catch (e) {
+        console.error("Audit polling failed", e);
+      }
+    };
+
+    poll();
+    intervalId = setInterval(poll, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [runId]);
+
+  if (!runId || !entries) {
+    return (
+      <div
+        style={{
+          backgroundColor: "black",
+          opacity: 0.5,
+          padding: "48px",
+          fontSize: "24px",
+          textAlign: "center",
+          borderRadius: "16px",
+          color: "white",
+        }}
+      >
+        {runId !== "" ? "Loading" : "Pipeline hasn't been run yet"}
+      </div>
+    );
+  }
   const agents = [
     "all",
     ...Array.from(new Set(entries.map((e: AuditEntry) => e.agent))),

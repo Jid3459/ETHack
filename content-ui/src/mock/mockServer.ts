@@ -25,8 +25,9 @@ export const MOCK_APPROVAL_DATA = {
     {
       phrase: "guaranteed settlement",
       reason: "The word 'guaranteed' is on the banned words list",
-      suggestion: 'Replace with "reliable settlement"',
+      fix_suggestion: 'Replace with "reliable settlement"',
       severity: "high" as const,
+      rule: "banned_words",
     },
   ],
   legal_flags: [
@@ -40,13 +41,22 @@ export const MOCK_APPROVAL_DATA = {
       suggestion: "Add a footnote citing internal benchmark data.",
     },
   ],
-  seo_suggestions: [
-    {
-      type: "keyword_density",
-      message: 'Add "payment gateway" in the first paragraph.',
-      impact: "medium" as const,
-    },
-  ],
+  strategy_card: {
+    summary: "User-specified: post on linkedin.",
+    primary_platform: "linkedin",
+    content_type: "post",
+    recommendations: [
+      {
+        platform: "linkedin",
+        fit_score: 10,
+        reasoning: "Specified directly by user.",
+        suggested_format: "post format for linkedin",
+        suggested_time: "As soon as approved",
+        target_persona: "As specified in brief",
+      },
+    ],
+  },
+  seo_suggestions: "Good",
 };
 
 // ── Mock Status Cycling ───────────────────────────────────────────────────────

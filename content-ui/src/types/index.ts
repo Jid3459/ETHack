@@ -32,7 +32,8 @@ export type AgentName =
 export interface BrandViolation {
   phrase: string;
   reason: string;
-  suggestion: string;
+  rule: string;
+  fix_suggestion: string;
   severity: "high" | "medium" | "low";
 }
 
@@ -51,12 +52,31 @@ export interface SEOSuggestion {
   impact: "high" | "medium" | "low";
 }
 
+// Recommendation type
+export type Recommendation = {
+  platform: string;
+  fit_score: number;
+  reasoning: string;
+  suggested_format: string;
+  suggested_time: string;
+  target_persona: string;
+};
+
+// Strategy Card type
+export type StrategyCard = {
+  summary: string;
+  primary_platform: string;
+  content_type: string;
+  recommendations: Recommendation[];
+};
+
 export interface ApprovalData {
   draft: string;
   brand_score: number;
   brand_violations: BrandViolation[];
   legal_flags: LegalFlag[];
-  seo_suggestions?: SEOSuggestion[];
+  seo_suggestions: string;
+  strategy_card: StrategyCard;
 }
 
 export interface StatusResponse {

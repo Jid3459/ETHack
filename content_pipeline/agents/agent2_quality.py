@@ -185,6 +185,7 @@ For each violation found, provide:
 - reason: why it violates
 - rule: which rule category (implied_claim | tone_mismatch | seo_quality)
 - fix_suggestion: specific replacement or action
+- severity: "high" | "medium" | "low"
 
 Also provide:
 - score: float 0.0-1.0 (1.0 = fully compliant, 0.0 = many violations)
@@ -286,6 +287,7 @@ def agent2_quality_guardian(state: ContentState) -> ContentState:
             "brand_violations": all_violations,
             "brand_passed": brand_passed,
             "escalated": escalated,
+            "seo_notes": seo_notes,
             "audit_trail": audit.append(
                 state["audit_trail"],
                 audit.make_entry(
@@ -308,6 +310,7 @@ def agent2_quality_guardian(state: ContentState) -> ContentState:
         "brand_score": round(score, 3),
         "brand_violations": all_violations,
         "brand_passed": brand_passed,
+        "seo_notes": seo_notes,
         "audit_trail": audit.append(
             state["audit_trail"],
             audit.make_entry(

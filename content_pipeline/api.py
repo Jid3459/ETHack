@@ -63,7 +63,9 @@ class RunRequest(BaseModel):
     brief: str
     channel: str = ""  # optional — Agent 0 decides if empty
     content_type: str = ""  # optional — Agent 0 decides if empty
-    target_audience: Optional[str] = None  # e.g. "first-time investors", "SMB finance teams"
+    target_audience: Optional[str] = (
+        None  # e.g. "first-time investors", "SMB finance teams"
+    )
     target_languages: list[str] = ["en"]
     scheduled_time: Optional[str] = None
 
@@ -196,6 +198,7 @@ async def get_status(run_id: str):
                 "brand_violations": values.get("brand_violations", []),
                 "legal_flags": values.get("legal_flags", []),
                 "strategy_card": values.get("strategy_card"),
+                "seo_suggestions": values.get("seo_notes"),
             }
             if status == "awaiting_human"
             else None
@@ -315,7 +318,9 @@ async def trigger_feedback_collection(run_id: str, background_tasks: BackgroundT
         )
         # Store result in registry for GET /feedback/{run_id}
         _run_registry[run_id]["feedback_result"] = result
-        print(f"[API] Feedback collection complete for run {run_id}: {result['feedback_records']} record(s)")
+        print(
+            f"[API] Feedback collection complete for run {run_id}: {result['feedback_records']} record(s)"
+        )
 
     background_tasks.add_task(_run_feedback)
 
@@ -362,6 +367,7 @@ async def list_product_knowledge(company_id: str):
     They are used by Agent 1 to enrich drafts with accurate product details.
     """
     from content_pipeline.tools.product_knowledge import ProductKnowledgeStore
+
     store = ProductKnowledgeStore()
     sources = store.list_sources(company_id=company_id)
     return {

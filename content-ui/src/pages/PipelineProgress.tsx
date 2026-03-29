@@ -193,28 +193,10 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-const sample_status: StatusResponse = {
-  run_id: "350c4106-53b2-4f7a-9399-5377c75bb9cb",
-  status: "running",
-  current_node: "agent2_quality_guardian",
-  revision_count: 1,
-  brand_score: 0.85,
-  brand_passed: true,
-  legal_passed: false,
-  legal_flags_count: 0,
-  draft_preview:
-    "You need cash flow to grow your e-commerce business. Instant Settlement by Razorpay helps you access funds in seconds. Say goodbye to waiting for T+2 days. Get paid instantly and manage your working capital efficiently. Try Instant Settlement now and boost your business! #Razorpay #InstantSettlement",
-  awaiting_human: false,
-  pipeline_complete: false,
-  approval_data: null,
-};
 export default function PipelineProgress() {
   const navigate = useNavigate();
-  // const { runId, companyName } = useApp();
-  const runId = "350c4106-53b2-4f7a-9399-5377c75bb9cb";
-  const companyName = "Razorpay";
-  console.log(runId);
-  const [status, setStatus] = useState<StatusResponse | null>(sample_status);
+  const { runId, companyName } = useApp();
+  const [status, setStatus] = useState<StatusResponse | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logCounter = useRef(0);
 
@@ -223,58 +205,79 @@ export default function PipelineProgress() {
     : 0;
   const progress = Math.round((passedCount / AGENTS.length) * 100);
 
-  // useEffect(() => {
-  //     const rid = runId || "mock_demo_run";
-  //     const add = (msg: string) => {
-  //         const type = classify(msg);
-  //         setLogs((prev) =>
-  //             [
-  //                 {
-  //                     id: logCounter.current++,
-  //                     time: new Date().toLocaleTimeString("en-IN", {
-  //                         hour: "2-digit",
-  //                         minute: "2-digit",
-  //                         second: "2-digit",
-  //                     }),
-  //                     msg,
-  //                     type,
-  //                 },
-  //                 ...prev,
-  //             ].slice(0, 60),
-  //         );
-  //     };
-  //     const poll = async () => {
-  //         const s = await getStatus(runId);
-  //         setStatus(s);
-  //         console.log(status);
-  //         if (s.current_node) add(`Agent ${s.current_node} — ${s.status}`);
-  //         if (s.revision_count > 0 && s.current_node === "drafter")
-  //             add(
-  //                 `Revision ${s.revision_count} triggered — fixing brand violations`,
-  //             );
-  //         if (s.brand_passed && s.current_node === "brand_checker")
-  //             add(`Brand score: ${s.brand_score}/100 — passed`);
-  //         if (s.status === "awaiting_human")
-  //             add("Pipeline paused — human review required");
-  //         if (s.status === "complete")
-  //             add("Pipeline complete — content published");
-  //         if (
-  //             s.status === "awaiting_human" ||
-  //             s.status === "complete" ||
-  //             s.status === "error"
-  //         )
-  //             clearInterval(id);
-  //     };
-  //     poll();
-  //     const id = setInterval(poll, 1000);
-  //     return () => clearInterval(id);
-  // }, [runId, status]);
-
+  useEffect(() => {
+    const add = (msg: string) => {
+      const type = classify(msg);
+      setLogs((prev) =>
+        [
+          {
+            id: logCounter.current++,
+            time: new Date().toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            msg,
+            type,
+          },
+          ...prev,
+        ].slice(0, 60),
+      );
+    };
+    let isFetching = false;
+    const poll = async () => {
+      if (!runId) return;
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        const s = await getStatus(runId);
+        setStatus(s);
+        if (s.current_node) add(`Agent ${s.current_node} — ${s.status}`);
+        if (s.revision_count > 0 && s.current_node === "agent1_drafter")
+          add(
+            `Revision ${s.revision_count} triggered — fixing brand violations`,
+          );
+        if (s.brand_passed && s.current_node === "agent2_quality_guardian")
+          add(`Brand score: ${s.brand_score}/100 — passed`);
+        if (s.status === "awaiting_human")
+          add("Pipeline paused — human review required");
+        if (s.status === "complete")
+          add("Pipeline complete — content published");
+        if (
+          s.status === "awaiting_human" ||
+          s.status === "complete" ||
+          s.status === "error"
+        )
+          clearInterval(id);
+      } finally {
+        isFetching = false;
+      }
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => clearInterval(id);
+  }, [runId]);
   useEffect(() => {
     if (status?.status === "awaiting_human")
       setTimeout(() => navigate("/approve"), 1500);
   }, [status?.status, navigate]);
-
+  if (!runId || !status) {
+    return (
+      <div
+        style={{
+          backgroundColor: "black",
+          opacity: 0.5,
+          padding: "48px",
+          fontSize: "24px",
+          textAlign: "center",
+          borderRadius: "16px",
+          color: "white",
+        }}
+      >
+        {runId !== "" ? "Loading" : "Pipeline hasn't been run yet"}
+      </div>
+    );
+  }
   const revisionActive =
     status?.current_node === "agent1_drafter" &&
     (status?.revision_count ?? 0) > 0;
