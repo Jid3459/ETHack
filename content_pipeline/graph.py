@@ -2,11 +2,12 @@
 graph.py — LangGraph pipeline orchestration
 
 Defines the full ContentState graph:
-  profile_loader → agent0 → [user confirms] → agent1 → agent2
+  profile_loader → agent0 → agent1 → agent2
   → (brand loop) → agent3 → (legal loop) → human_gate
-  → agent4 → agent5 → END
+  → agent4 (localize) → agent6 (image) → agent5 (distribute) → END
 
-Persistence: SQLite checkpointer for INTERRUPT/resume at human_gate.
+Human gate: approve → continues, reject+feedback → back to agent1, reject → END
+Persistence: MemorySaver checkpointer for INTERRUPT/resume at human_gate.
 """
 
 from __future__ import annotations
@@ -209,7 +210,7 @@ def route_after_human_gate(
 ) -> Literal["agent6_image_generator", "agent1_drafter", "__end__"]:
     """
     After human decision:
-    - approve → generate images → localise
+    - approve → localise → generate images
     - reject with feedback → back to Agent 1 with feedback injected
     - reject without feedback → end pipeline
     """
@@ -253,8 +254,8 @@ def build_graph() -> StateGraph:
     # ── Unconditional edges ───────────────────────────────────────────────────
     graph.add_edge("profile_loader", "agent0_strategy_advisor")
     graph.add_edge("agent0_strategy_advisor", "agent1_drafter")
-    graph.add_edge("agent6_image_generator", "agent4_localizer")
-    graph.add_edge("agent4_localizer", "agent5_distributor")
+    graph.add_edge("agent4_localizer", "agent6_image_generator")
+    graph.add_edge("agent6_image_generator", "agent5_distributor")
     graph.add_edge("agent5_distributor", END)
 
     # ── Conditional edges ─────────────────────────────────────────────────────
@@ -266,7 +267,6 @@ def build_graph() -> StateGraph:
         {
             "agent1_drafter": "agent1_drafter",
             "agent3_legal_reviewer": "agent3_legal_reviewer",
-            "human_gate": "human_gate",
         },
     )
 
@@ -283,7 +283,7 @@ def build_graph() -> StateGraph:
         "human_gate",
         route_after_human_gate,
         {
-            "agent6_image_generator": "agent6_image_generator",
+            "agent6_image_generator": "agent4_localizer",
             "agent1_drafter": "agent1_drafter",
             "__end__": END,
         },

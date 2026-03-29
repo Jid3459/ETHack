@@ -49,7 +49,9 @@ except ImportError:
 # ── Headline extraction ────────────────────────────────────────────────────────
 
 _INFO_SYSTEM = (
-    "You extract headlines, the main text and a click-to-action tag for social media posts "
+    "You extract headlines, the main text and a click-to-action tag for social media posts. "
+    "CRITICAL: If the input text is in Hindi, Marathi, Tamil, Telugu, Bengali or any other language, "
+    "your output headline, subtext, and cta MUST also be in that same language. Never translate to English. "
     "Always respond with valid JSON only. No preamble, no markdown fences."
 )
 

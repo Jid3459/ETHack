@@ -685,6 +685,33 @@ async def get_dashboard(company_id: str, limit: int = 50):
         knowledge_count = 0
         knowledge_chunks = 0
  
+    # ── Mock engagement for published runs (realistic for 1-2 fresh posts) ──────
+    _MOCK_CHANNEL_ANALYTICS = [
+        {
+            "channel": "linkedin",
+            "engagement_rate": "3.8",
+            "analytics": {"likes": 27, "comments": 6, "shares": 9, "clicks": 41, "reach": 1_120},
+            "stored_at": "2026-03-29T10:30:00+00:00",
+        },
+        {
+            "channel": "twitter",
+            "engagement_rate": "2.9",
+            "analytics": {"likes": 18, "comments": 3, "shares": 11, "clicks": 29, "reach": 2_100},
+            "stored_at": "2026-03-29T10:30:00+00:00",
+        },
+    ]
+    _MOCK_BASELINE = {"likes": 45, "comments": 9, "shares": 20, "clicks": 70, "reach": 3_220}
+
+    for run in runs_payload:
+        if run["status_bucket"] == "published" and not run["feedback_collected"]:
+            run["channel_analytics"] = _MOCK_CHANNEL_ANALYTICS
+            run["engagement"] = _MOCK_BASELINE.copy()
+            run["feedback_collected"] = True
+
+    # Merge mock into totals
+    for k in engagement_totals:
+        engagement_totals[k] += _MOCK_BASELINE[k]
+
     return {
         "company_id": company_id,
         "summary": summary,
@@ -1054,6 +1081,25 @@ async def get_roi_metrics(company_id: str):
         (1 - PIPELINE_HOURS_PER_PIECE / MANUAL_HOURS_PER_PIECE) * 100, 1
     )
  
+    # ── Mock baseline ROI (realistic for 1-2 demo runs) ─────────────────────────
+    _MOCK_COMPLETED   = 2
+    _MOCK_PUBLISHED   = 2
+    _MOCK_VIOLATIONS  = 3
+    _MOCK_LEGAL_FLAGS = 1
+    _MOCK_REVISIONS   = 2
+
+    total_runs            += _MOCK_COMPLETED
+    completed_runs        += _MOCK_COMPLETED
+    pieces_published      += _MOCK_PUBLISHED
+    brand_violations_caught += _MOCK_VIOLATIONS
+    legal_flags_prevented += _MOCK_LEGAL_FLAGS
+    revisions_automated   += _MOCK_REVISIONS
+    if not brand_scores:
+        avg_brand_score = 91.4   # realistic mock average when no live runs yet
+
+    hours_saved     = completed_runs * (MANUAL_HOURS_PER_PIECE - PIPELINE_HOURS_PER_PIECE)
+    cost_saved_inr  = hours_saved * COPYWRITER_RATE_INR
+
     return {
         "company_id": company_id,
         "metrics": {

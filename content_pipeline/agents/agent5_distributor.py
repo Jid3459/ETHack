@@ -306,11 +306,15 @@ def _publish_to_sendgrid(
 def _get_content_for_channel(
     platform: str,
     localized_versions: dict[str, str],
-    primary_lang: str = "en",
+    target_languages: list[str] | None = None,
 ) -> str:
-    """Get the appropriate language version for a channel."""
-    # Use English as default; localised versions can be routed per region
-    return localized_versions.get(primary_lang, localized_versions.get("en", ""))
+    """Get the appropriate language version for a channel.
+    Picks the first non-English language if one was requested, else English."""
+    if target_languages:
+        for lang in target_languages:
+            if lang != "en" and lang in localized_versions:
+                return localized_versions[lang]
+    return localized_versions.get("en", "")
 
 
 def _extract_blog_title(draft: str) -> str:
@@ -343,13 +347,14 @@ def agent5_distributor(state: ContentState) -> ContentState:
     localized = state.get("localized_versions", {"en": state.get("current_draft", "")})
     scheduled_at = state.get("scheduled_time")
     generated_images: dict = state.get("generated_images", {})
+    target_languages: list[str] = state.get("target_languages", ["en"])
 
     receipts: list[DistributionReceipt] = []
 
-    company_name = state.get("company_profile").get("name", "Company Name")
+    company_name = (state.get("company_profile") or {}).get("name", "Company Name")
 
     for platform in platforms:
-        content = _get_content_for_channel(platform, localized)
+        content = _get_content_for_channel(platform, localized, target_languages)
 
         if platform in ("linkedin", "twitter"):
             # Upload platform image to ImgBB if available, then attach to post
