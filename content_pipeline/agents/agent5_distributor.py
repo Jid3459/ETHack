@@ -11,6 +11,7 @@ Writes to state:   distribution_receipts, pipeline_complete
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 from datetime import datetime, timezone
@@ -55,6 +56,35 @@ _SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
 _SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "")
 _SENDGRID_LIST_ID = os.getenv("SENDGRID_LIST_ID", "")
 
+_IMGBB_API_KEY = os.getenv("IMGBB_API_KEY", "")
+_IMGBB_UPLOAD_URL = "https://api.imgbb.com/1/upload"
+
+
+# ── Image hosting (ImgBB) ─────────────────────────────────────────────────────
+
+def _upload_to_imgbb(file_path: str) -> str | None:
+    """Upload a local image file to ImgBB and return the public URL, or None on failure."""
+    if not _IMGBB_API_KEY:
+        print("[agent5_distributor] IMGBB_API_KEY not set — skipping image upload")
+        return None
+    try:
+        with open(file_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
+        resp = requests.post(
+            _IMGBB_UPLOAD_URL,
+            data={"key": _IMGBB_API_KEY, "image": b64},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        url = data.get("data", {}).get("url")
+        if url:
+            print(f"[agent5_distributor] Image uploaded to ImgBB: {url}")
+        return url
+    except Exception as exc:
+        print(f"[agent5_distributor] ImgBB upload failed: {exc}")
+        return None
+
 
 # ── Channel publishers ────────────────────────────────────────────────────────
 
@@ -62,6 +92,7 @@ def _publish_to_buffer(
     content: str,
     platform: str,
     scheduled_at: str | None,
+    image_url: str | None = None,
 ) -> DistributionReceipt:
     """Publish or schedule a post via Buffer GraphQL API."""
     channel_id = _BUFFER_CHANNEL_IDS.get(platform, "")
@@ -74,27 +105,18 @@ def _publish_to_buffer(
             error="Buffer credentials not configured",
         )
 
-    # Use customScheduled mode if a scheduled_at time is provided, else shareNow
+    post_input: dict = {
+        "channelId": channel_id,
+        "text": content,
+        "schedulingType": "automatic",
+        "mode": "customScheduled" if scheduled_at else "shareNow",
+    }
     if scheduled_at:
-        mode = "customScheduled"
-        variables: dict = {
-            "input": {
-                "channelId": channel_id,
-                "text": content,
-                "schedulingType": "automatic",
-                "mode": mode,
-                "dueAt": scheduled_at,
-            }
-        }
-    else:
-        variables = {
-            "input": {
-                "channelId": channel_id,
-                "text": content,
-                "schedulingType": "automatic",
-                "mode": "shareNow",
-            }
-        }
+        post_input["dueAt"] = scheduled_at
+    if image_url:
+        post_input["assets"] = {"images": [{"url": image_url}]}
+
+    variables: dict = {"input": post_input}
 
     try:
         resp = requests.post(
@@ -315,6 +337,7 @@ def agent5_distributor(state: ContentState) -> ContentState:
     platforms = state.get("confirmed_platforms", [state.get("channel", "linkedin")])
     localized = state.get("localized_versions", {"en": state.get("current_draft", "")})
     scheduled_at = state.get("scheduled_time")
+    generated_images: dict = state.get("generated_images", {})
 
     receipts: list[DistributionReceipt] = []
 
@@ -322,7 +345,12 @@ def agent5_distributor(state: ContentState) -> ContentState:
         content = _get_content_for_channel(platform, localized)
 
         if platform in ("linkedin", "twitter"):
-            receipt = _publish_to_buffer(content, platform, scheduled_at)
+            # Upload platform image to ImgBB if available, then attach to post
+            image_url: str | None = None
+            local_image_path = generated_images.get(platform)
+            if local_image_path:
+                image_url = _upload_to_imgbb(local_image_path)
+            receipt = _publish_to_buffer(content, platform, scheduled_at, image_url)
 
         elif platform == "blog":
             title = _extract_blog_title(content)
