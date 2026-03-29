@@ -183,10 +183,20 @@ def agent6_image_generator(state: ContentState) -> ContentState:
         }
 
     llm = get_llm()
-    draft = state.get("current_draft", "")
     profile = state.get("company_profile") or {}
     company_name = profile.get("name", state.get("company_id", ""))
     run_id = state["run_id"]
+
+    # Pick localized draft for image text if a non-English language was requested.
+    # Falls back to current_draft (English) if no localization exists.
+    localized_versions: dict = state.get("localized_versions", {})
+    target_languages: list = state.get("target_languages", ["en"])
+    draft = state.get("current_draft", "")
+    for lang in target_languages:
+        if lang != "en" and localized_versions.get(lang):
+            draft = localized_versions[lang]
+            print(f"  [image_generator] Using localized draft (lang={lang}) for image text")
+            break
 
     # Extract one headline for all platforms (same approved draft)
 
