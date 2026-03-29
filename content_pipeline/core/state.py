@@ -75,6 +75,7 @@ class ContentState(TypedDict):
     brand_score: Optional[float]  # 0.0 – 1.0
     brand_violations: list[BrandViolation]
     brand_passed: bool
+    seo_notes: str
 
     # ── Legal compliance (Agent 3) ────────────────────────────────────────────
     legal_flags: list[LegalFlag]
@@ -94,7 +95,9 @@ class ContentState(TypedDict):
     distribution_receipts: list[DistributionReceipt]
 
     # ── Image generation (Agent 6) ────────────────────────────────────────────
-    generated_images: dict  # {platform: absolute file path}  e.g. {"linkedin": "/.../.png"}
+    generated_images: (
+        dict  # {platform: absolute file path}  e.g. {"linkedin": "/.../.png"}
+    )
 
     # ── Analytics (written async post-publish) ────────────────────────────────
     engagement_data: Optional[dict]

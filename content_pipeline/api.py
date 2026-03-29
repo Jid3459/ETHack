@@ -12,8 +12,10 @@ Endpoints:
 
 from __future__ import annotations
 
+import os
+import threading
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import io
 
@@ -24,6 +26,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from langgraph.types import Command
 from pydantic import BaseModel
 
+# Delay before Agent 7 collects analytics after distribution.
+# Default: 24h. Set FEEDBACK_DELAY_SECONDS=60 in .env for quick testing.
+FEEDBACK_DELAY_SECONDS = int(os.getenv("FEEDBACK_DELAY_SECONDS", str(24 * 3600)))
 
 app = FastAPI(title="Content Pipeline API", version="1.0.0")
 
@@ -66,7 +71,9 @@ class RunRequest(BaseModel):
     brief: str
     channel: str = ""  # optional — Agent 0 decides if empty
     content_type: str = ""  # optional — Agent 0 decides if empty
-    target_audience: Optional[str] = None  # e.g. "first-time investors", "SMB finance teams"
+    target_audience: Optional[str] = (
+        None  # e.g. "first-time investors", "SMB finance teams"
+    )
     target_languages: list[str] = ["en"]
     scheduled_time: Optional[str] = None
 
@@ -100,6 +107,8 @@ def _run_pipeline_background(initial_state: dict, thread_config: dict) -> None:
     """
     Run the graph in a background thread.
     The graph will INTERRUPT at human_gate and wait.
+    After Agent 5 completes distribution, automatically schedules Agent 7
+    to collect engagement analytics after FEEDBACK_DELAY_SECONDS.
     """
     try:
         for _ in _graph.stream(initial_state, config=thread_config):
@@ -108,6 +117,71 @@ def _run_pipeline_background(initial_state: dict, thread_config: dict) -> None:
         # Log error — don't crash the background task
         print(f"[Pipeline error] {exc}")
         traceback.print_exc()
+        return
+
+    # After stream ends, check if distribution completed and auto-schedule feedback
+    try:
+        state_snapshot = _graph.get_state(thread_config)
+        if state_snapshot and state_snapshot.values.get("pipeline_complete"):
+            run_id = state_snapshot.values.get("run_id")
+            if run_id and run_id in _run_registry:
+                # Only schedule if not already scheduled or collected
+                entry = _run_registry[run_id]
+                if not entry.get("feedback_scheduled_at") and not entry.get("feedback_result"):
+                    _auto_schedule_feedback(run_id, thread_config)
+    except Exception as exc:
+        print(f"[Pipeline] Could not auto-schedule feedback: {exc}")
+
+
+def _auto_schedule_feedback(run_id: str, thread_config: dict) -> None:
+    """
+    Schedule Agent 7 feedback collection FEEDBACK_DELAY_SECONDS after distribution.
+    Uses a daemon threading.Timer so it does not block server shutdown.
+
+    The timer fires once and calls collect_feedback() exactly as the manual
+    POST /feedback/{run_id} endpoint does — results land in _run_registry under
+    'feedback_result' and are readable via GET /feedback/{run_id}.
+    """
+    delay = FEEDBACK_DELAY_SECONDS
+    eta = datetime.now(timezone.utc) + timedelta(seconds=delay)
+
+    _run_registry[run_id]["feedback_scheduled_at"] = datetime.now(timezone.utc).isoformat()
+    _run_registry[run_id]["feedback_eta"] = eta.isoformat()
+
+    print(
+        f"[API] Auto-scheduled Agent 7 for run {run_id} "
+        f"in {delay}s (ETA: {eta.isoformat()})"
+    )
+
+    def _run_feedback():
+        try:
+            state_snapshot = _graph.get_state(thread_config)
+            if state_snapshot is None:
+                print(f"[API] Auto-feedback: state not found for run {run_id}")
+                return
+            values = state_snapshot.values
+            from content_pipeline.agents.agent7_feedback import collect_feedback
+            result = collect_feedback(
+                run_id=run_id,
+                company_id=values.get("company_id", ""),
+                distribution_receipts=values.get("distribution_receipts", []),
+                current_draft=values.get("current_draft", ""),
+                content_type=values.get("content_type", ""),
+                target_audience=values.get("target_audience") or "default",
+            )
+            _run_registry[run_id]["feedback_result"] = result
+            print(
+                f"[API] Auto-feedback complete for run {run_id}: "
+                f"{result['feedback_records']} record(s)"
+            )
+        except Exception as exc:
+            print(f"[API] Auto-feedback failed for run {run_id}: {exc}")
+            traceback.print_exc()
+
+    timer = threading.Timer(delay, _run_feedback)
+    timer.daemon = True  # don't block server shutdown
+    timer.start()
+    _run_registry[run_id]["_feedback_timer"] = timer
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -216,6 +290,7 @@ async def get_status(run_id: str):
                 "brand_violations": values.get("brand_violations", []),
                 "legal_flags": values.get("legal_flags", []),
                 "strategy_card": values.get("strategy_card"),
+                "seo_suggestions": values.get("seo_notes"),
             }
             if status == "awaiting_human"
             else None
@@ -292,10 +367,13 @@ async def get_audit_trail(run_id: str):
 @app.post("/feedback/{run_id}")
 async def trigger_feedback_collection(run_id: str, background_tasks: BackgroundTasks):
     """
-    Trigger Agent 7 — Feedback Collector for a completed run.
+    Manually trigger Agent 7 — Feedback Collector for a completed run.
 
-    Call this 24-48h after distribution to pull engagement analytics
-    (likes, shares, comments, clicks, reach) from Buffer, WordPress, and SendGrid.
+    Normally Agent 7 is auto-scheduled FEEDBACK_DELAY_SECONDS after distribution
+    (default 24h). Call this endpoint to trigger immediately — useful for testing
+    or to collect analytics earlier than the scheduled time.
+
+    If an auto-schedule timer is still pending, it will be cancelled first.
 
     Results are stored in the feedback_memory Qdrant collection.
     Agent 1 will use this data on the next run for this company to improve content.
@@ -322,6 +400,13 @@ async def trigger_feedback_collection(run_id: str, background_tasks: BackgroundT
             detail="Pipeline not yet complete — wait for distribution to finish first",
         )
 
+    # Cancel any pending auto-schedule timer so both don't fire
+    existing_timer: threading.Timer | None = _run_registry[run_id].get("_feedback_timer")
+    if existing_timer is not None:
+        existing_timer.cancel()
+        _run_registry[run_id]["_feedback_timer"] = None
+        print(f"[API] Cancelled auto-schedule timer for run {run_id} (manual trigger)")
+
     from content_pipeline.agents.agent7_feedback import collect_feedback
 
     def _run_feedback():
@@ -333,9 +418,8 @@ async def trigger_feedback_collection(run_id: str, background_tasks: BackgroundT
             content_type=values.get("content_type", ""),
             target_audience=values.get("target_audience") or "default",
         )
-        # Store result in registry for GET /feedback/{run_id}
         _run_registry[run_id]["feedback_result"] = result
-        print(f"[API] Feedback collection complete for run {run_id}: {result['feedback_records']} record(s)")
+        print(f"[API] Manual feedback collection complete for run {run_id}: {result['feedback_records']} record(s)")
 
     background_tasks.add_task(_run_feedback)
 
@@ -351,26 +435,40 @@ async def get_feedback(run_id: str):
     """
     Return engagement analytics collected by Agent 7 for a run.
 
-    Shows:
-      - Per-channel engagement stats (likes, comments, shares, clicks, reach)
-      - Engagement rate calculated per channel
-      - Timestamp of when analytics were polled
+    Possible statuses:
+      - "scheduled"      — Agent 7 will auto-fire at feedback_eta (set after distribution)
+      - "collected"      — Analytics are available (auto or manual trigger completed)
+      - "not_collected"  — Pipeline not yet complete or feedback never triggered
 
-    This data is also stored in feedback_memory Qdrant collection and used
+    Analytics are also stored in feedback_memory Qdrant collection and used
     automatically by Agent 1 on future runs for the same company.
     """
     if run_id not in _run_registry:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    feedback = _run_registry[run_id].get("feedback_result")
-    if not feedback:
+    entry = _run_registry[run_id]
+    feedback = entry.get("feedback_result")
+
+    if feedback:
+        return {"run_id": run_id, "status": "collected", **feedback}
+
+    if entry.get("feedback_scheduled_at"):
         return {
             "run_id": run_id,
-            "status": "not_collected",
-            "message": "No feedback collected yet. Call POST /feedback/{run_id} first.",
+            "status": "scheduled",
+            "feedback_scheduled_at": entry["feedback_scheduled_at"],
+            "feedback_eta": entry.get("feedback_eta"),
+            "message": (
+                f"Agent 7 will auto-collect analytics at {entry.get('feedback_eta')}. "
+                "Call POST /feedback/{run_id} to trigger immediately instead."
+            ),
         }
 
-    return {"run_id": run_id, "status": "collected", **feedback}
+    return {
+        "run_id": run_id,
+        "status": "not_collected",
+        "message": "No feedback collected yet. Call POST /feedback/{run_id} to trigger manually.",
+    }
 
 
 @app.get("/knowledge/{company_id}")
@@ -382,6 +480,7 @@ async def list_product_knowledge(company_id: str):
     They are used by Agent 1 to enrich drafts with accurate product details.
     """
     from content_pipeline.tools.product_knowledge import ProductKnowledgeStore
+
     store = ProductKnowledgeStore()
     sources = store.list_sources(company_id=company_id)
     return {

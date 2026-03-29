@@ -40,31 +40,48 @@ _SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
 # ── Analytics fetchers ────────────────────────────────────────────────────────
 
 
+_BUFFER_GRAPHQL_URL = "https://api.buffer.com/graphql"
+_BUFFER_GET_POST_QUERY = """
+query GetPost($input: PostInput!) {
+  post(input: $input) {
+    id
+    status
+    sentAt
+    text
+  }
+}
+"""
+
+
 def _fetch_buffer_analytics(platform_post_id: str) -> dict:
     """
-    Fetch engagement for a Buffer post via GET /1/updates/{id}.json
-    Buffer free tier includes basic post-level statistics.
+    Fetch post status via Buffer GraphQL API.
+
+    Note: Buffer's new API does not expose engagement metrics (likes/shares/comments).
+    This function confirms the post was sent and returns zeros for engagement fields.
+    Native platform APIs (LinkedIn Analytics, Twitter/X API) would be needed for
+    real engagement data — those require separate app credentials beyond Buffer's scope.
     """
     if not _BUFFER_ACCESS_TOKEN or not platform_post_id:
         return _zeros()
     try:
-        resp = requests.get(
-            f"https://api.bufferapp.com/1/updates/{platform_post_id}.json",
-            headers={"Authorization": f"Bearer {_BUFFER_ACCESS_TOKEN}"},
+        resp = requests.post(
+            _BUFFER_GRAPHQL_URL,
+            headers={
+                "Authorization": f"Bearer {_BUFFER_ACCESS_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            json={"query": _BUFFER_GET_POST_QUERY, "variables": {"input": {"id": platform_post_id}}},
             timeout=10,
         )
         resp.raise_for_status()
-        data = resp.json()
-        stats = data.get("statistics", {})
-        return {
-            "likes": int(stats.get("likes", 0) or 0),
-            "comments": int(stats.get("comments", 0) or 0),
-            "shares": int(stats.get("shares", 0) or 0),
-            "clicks": int(stats.get("clicks", 0) or 0),
-            "reach": int(stats.get("reach", stats.get("impressions", 0)) or 0),
-        }
+        result = resp.json()
+        post = result.get("data", {}).get("post", {})
+        status = post.get("status", "unknown")
+        print(f"[agent7_feedback] Buffer post {platform_post_id} status={status} — engagement metrics not available via Buffer API")
+        return _zeros()
     except Exception as exc:
-        print(f"[agent7_feedback] Buffer analytics failed for {platform_post_id}: {exc}")
+        print(f"[agent7_feedback] Buffer post lookup failed for {platform_post_id}: {exc}")
         return _zeros()
 
 

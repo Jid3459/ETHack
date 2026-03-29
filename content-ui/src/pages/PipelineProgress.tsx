@@ -1,166 +1,286 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useApp } from '../context/AppContext'
-import { getMockStatus } from '../mock/mockServer'
-import { StatusResponse, AgentName } from '../types'
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
+import { StatusResponse, AgentName } from "../types";
+import Galaxy from "../components/reactbits/Galaxy";
+import { getStatus } from "../api/client";
 
-// ─── Galaxy Canvas Background ─────────────────────────────────────────────────
-function Galaxy() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const mouseRef = useRef({ x: -9999, y: -9999 })
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let t = 0
-    let animId: number
-
-    interface Star { x: number; y: number; vx: number; vy: number; r: number; phase: number; speed: number; cr: number; cg: number; cb: number }
-
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
-    resize()
-    window.addEventListener('resize', resize)
-    const onMove = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY } }
-    window.addEventListener('mousemove', onMove)
-
-    const palettes = [[59,130,246],[99,102,241],[139,92,246],[6,182,212],[168,85,247],[220,228,255]]
-    const stars: Star[] = Array.from({ length: 260 }, () => {
-      const p = palettes[Math.floor(Math.random() * palettes.length)]
-      return { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, vx: (Math.random()-0.5)*0.06, vy: (Math.random()-0.5)*0.06, r: Math.random()*1.6+0.2, phase: Math.random()*Math.PI*2, speed: 0.6+Math.random()*2, cr: p[0], cg: p[1], cb: p[2] }
-    })
-
-    const draw = () => {
-      const w = canvas.width; const h = canvas.height
-      ctx.fillStyle = 'rgba(6,8,15,0.18)'; ctx.fillRect(0,0,w,h)
-      const mx = mouseRef.current.x; const my = mouseRef.current.y
-
-      stars.forEach(s => {
-        const dx = s.x-mx; const dy = s.y-my; const dist = Math.sqrt(dx*dx+dy*dy)
-        if (dist < 140 && dist > 0) { const f=((140-dist)/140)*0.25; s.vx+=(dx/dist)*f; s.vy+=(dy/dist)*f }
-        s.vx*=0.97; s.vy*=0.97; s.x+=s.vx; s.y+=s.vy
-        if (s.x < -10) s.x=w+10; if (s.x > w+10) s.x=-10; if (s.y < -10) s.y=h+10; if (s.y > h+10) s.y=-10
-        const bri = 0.25+0.75*Math.abs(Math.sin(t*s.speed+s.phase)); const r=s.r*(0.7+0.5*bri)
-        ctx.beginPath(); ctx.arc(s.x,s.y,r,0,Math.PI*2); ctx.fillStyle=`rgba(${s.cr},${s.cg},${s.cb},${bri*0.9})`; ctx.fill()
-        if (bri > 0.65) { const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,r*5); g.addColorStop(0,`rgba(${s.cr},${s.cg},${s.cb},${bri*0.25})`); g.addColorStop(1,`rgba(${s.cr},${s.cg},${s.cb},0)`); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,r*5,0,Math.PI*2); ctx.fill() }
-      })
-
-      const nebulae=[{x:0.15,y:0.3,r:0.28,cr:59,cg:130,cb:246},{x:0.85,y:0.7,r:0.24,cr:139,cg:92,cb:246},{x:0.5,y:0.15,r:0.2,cr:6,cg:182,cb:212}]
-      nebulae.forEach(n => { const nx=w*n.x+Math.sin(t*0.08+n.x*3)*w*0.04; const ny=h*n.y+Math.cos(t*0.06+n.y*3)*h*0.04; const nr=Math.min(w,h)*n.r; const ng=ctx.createRadialGradient(nx,ny,0,nx,ny,nr); ng.addColorStop(0,`rgba(${n.cr},${n.cg},${n.cb},0.025)`); ng.addColorStop(1,`rgba(${n.cr},${n.cg},${n.cb},0)`); ctx.fillStyle=ng; ctx.fillRect(0,0,w,h) })
-
-      t+=0.016; animId=requestAnimationFrame(draw)
-    }
-
-    ctx.fillStyle='#06080f'; ctx.fillRect(0,0,canvas.width,canvas.height); draw()
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize',resize); window.removeEventListener('mousemove',onMove) }
-  }, [])
-
-  return <canvas ref={canvasRef} style={{ position:'fixed',inset:0,zIndex:0,pointerEvents:'none' }} />
+// ─── Pipeline Logic ───────────────────────────────────────────────────────────
+const AGENTS: {
+  key: AgentName;
+  label: string;
+  description: string;
+  icon: string;
+}[] = [
+  {
+    key: "profile_loader",
+    label: "Profile Loader",
+    description: "Loading company brand profile",
+    icon: "◈",
+  },
+  {
+    key: "agent1_drafter",
+    label: "Content Drafter",
+    description: "Generating content draft",
+    icon: "✦",
+  },
+  {
+    key: "agent2_quality_guardian",
+    label: "Brand Compliance",
+    description: "Checking brand guidelines",
+    icon: "⬡",
+  },
+  {
+    key: "agent3_legal_reviewer",
+    label: "Legal Review",
+    description: "Checking regulatory compliance",
+    icon: "⚖",
+  },
+  {
+    key: "human_gate",
+    label: "Human Approval",
+    description: "Awaiting your review",
+    icon: "◉",
+  },
+  {
+    key: "agent4_localizer",
+    label: "Localisation",
+    description: "Translating to target languages",
+    icon: "◆",
+  },
+  {
+    key: "agent5_distributor",
+    label: "Distribution",
+    description: "Publishing to channels",
+    icon: "▶",
+  },
+];
+type CardState = "pending" | "active" | "passed" | "failed" | "waiting";
+interface LogEntry {
+  id: number;
+  time: string;
+  msg: string;
+  type: "info" | "success" | "warn" | "error" | "system";
 }
-
-// ─── Pipeline config ──────────────────────────────────────────────────────────
-const AGENTS: { key: AgentName; label: string; description: string; icon: string }[] = [
-  { key:'profile_loader', label:'Profile Loader',   description:'Loading company brand profile',   icon:'◈' },
-  { key:'drafter',        label:'Content Drafter',  description:'Generating content draft',         icon:'✦' },
-  { key:'brand_checker',  label:'Brand Compliance', description:'Checking brand guidelines',        icon:'⬡' },
-  { key:'legal_reviewer', label:'Legal Review',     description:'Checking regulatory compliance',   icon:'⚖' },
-  { key:'seo_checker',    label:'SEO Check',        description:'Analysing discoverability',        icon:'◎' },
-  { key:'human_gate',     label:'Human Approval',   description:'Awaiting your review',             icon:'◉' },
-  { key:'localizer',      label:'Localisation',     description:'Translating to target languages',  icon:'◆' },
-  { key:'distributor',    label:'Distribution',     description:'Publishing to channels',           icon:'▶' },
-]
-
-type CardState = 'pending'|'active'|'passed'|'failed'|'waiting'
-interface LogEntry { id:number; time:string; msg:string; type:'info'|'success'|'warn'|'error'|'system' }
 
 function getCardState(key: AgentName, s: StatusResponse): CardState {
-  const cur = s.current_node
-  if (key==='brand_checker') { if (cur==='brand_checker') return s.brand_passed===false&&s.brand_score!==null?'failed':'active'; if (s.brand_passed) return 'passed' }
-  if (key==='legal_reviewer') { if (cur==='legal_reviewer') return 'active'; if (s.legal_passed) return 'passed' }
-  if (key==='human_gate') { if (s.status==='awaiting_human') return 'waiting'; if (s.pipeline_complete) return 'passed' }
-  if (cur===key) return 'active'
-  const order = AGENTS.map(a=>a.key)
-  const ci = order.indexOf(cur as AgentName)
-  const ai = order.indexOf(key)
-  if (s.pipeline_complete) return 'passed'
-  if (ci > ai) return 'passed'
-  return 'pending'
+  const cur = s.current_node;
+  if (key === "agent2_quality_guardian") {
+    if (cur === "agent2_quality_guardian")
+      return s.brand_passed === false && s.brand_score !== null
+        ? "failed"
+        : "active";
+    if (s.brand_passed) return "passed";
+  }
+  if (key === "agent3_legal_reviewer") {
+    if (cur === "agent3_legal_reviewer") return "active";
+    if (s.legal_passed) return "passed";
+  }
+  if (key === "human_gate") {
+    if (s.status === "awaiting_human") return "waiting";
+    if (s.pipeline_complete) return "passed";
+  }
+  if (cur === key) return "active";
+  const order = AGENTS.map((a) => a.key);
+  const ci = order.indexOf(cur as AgentName);
+  const ai = order.indexOf(key);
+  if (s.pipeline_complete) return "passed";
+  if (ci > ai) return "passed";
+  return "pending";
 }
 
-// ── FIXED: all label/text colors are now readable ─────────────────────────────
-const CFG: Record<CardState,{bg:string;border:string;dot:string;label:string;glow:string;text:string;descColor:string;nameColor:string}> = {
-  active:  { bg:'rgba(59,130,246,0.12)',  border:'#3b82f6', dot:'#3b82f6', label:'#93c5fd', glow:'0 0 24px rgba(59,130,246,0.3)',  text:'Running…',       descColor:'#7090c0', nameColor:'#dde8ff' },
-  passed:  { bg:'rgba(34,197,94,0.08)',   border:'#22c55e', dot:'#22c55e', label:'#86efac', glow:'0 0 16px rgba(34,197,94,0.2)',   text:'Passed ✓',       descColor:'#6aaa88', nameColor:'#d0f0de' },
-  failed:  { bg:'rgba(239,68,68,0.10)',   border:'#ef4444', dot:'#ef4444', label:'#fca5a5', glow:'0 0 20px rgba(239,68,68,0.25)',  text:'Needs revision', descColor:'#b07070', nameColor:'#ffd8d8' },
-  waiting: { bg:'rgba(245,158,11,0.10)',  border:'#f59e0b', dot:'#f59e0b', label:'#fcd34d', glow:'0 0 20px rgba(245,158,11,0.25)', text:'Awaiting you',   descColor:'#b09040', nameColor:'#ffe8a0' },
-  // PENDING: was '#2a3050' (invisible) — now readable muted blue-grey
-  pending: { bg:'rgba(12,14,26,0.6)',     border:'#252d48', dot:'#354060', label:'#5a6a8a', glow:'none',                           text:'Pending',        descColor:'#4a5a7a', nameColor:'#6a7a9a' },
+const CFG: Record<
+  CardState,
+  {
+    bg: string;
+    border: string;
+    dot: string;
+    label: string;
+    glow: string;
+    text: string;
+  }
+> = {
+  active: {
+    bg: "rgba(59,130,246,0.11)",
+    border: "#3b82f6",
+    dot: "#3b82f6",
+    label: "#93c5fd",
+    glow: "0 0 24px rgba(59,130,246,0.3)",
+    text: "Running…",
+  },
+  passed: {
+    bg: "rgba(34,197,94,0.07)",
+    border: "#22c55e",
+    dot: "#22c55e",
+    label: "#86efac",
+    glow: "0 0 16px rgba(34,197,94,0.18)",
+    text: "Passed ✓",
+  },
+  failed: {
+    bg: "rgba(239,68,68,0.09)",
+    border: "#ef4444",
+    dot: "#ef4444",
+    label: "#fca5a5",
+    glow: "0 0 20px rgba(239,68,68,0.22)",
+    text: "Needs revision",
+  },
+  waiting: {
+    bg: "rgba(245,158,11,0.09)",
+    border: "#f59e0b",
+    dot: "#f59e0b",
+    label: "#fcd34d",
+    glow: "0 0 20px rgba(245,158,11,0.22)",
+    text: "Awaiting you",
+  },
+  pending: {
+    bg: "rgba(12,14,24,0.55)",
+    border: "#1a1f30",
+    dot: "#1a1f30",
+    label: "#2a3050",
+    glow: "none",
+    text: "Pending",
+  },
+};
+
+const LC: Record<LogEntry["type"], { c: string; bar: string; bg: string }> = {
+  info: { c: "#60a5fa", bar: "#3b82f6", bg: "rgba(59,130,246,0.06)" },
+  success: { c: "#4ade80", bar: "#22c55e", bg: "rgba(34,197,94,0.06)" },
+  warn: { c: "#fbbf24", bar: "#f59e0b", bg: "rgba(245,158,11,0.06)" },
+  error: { c: "#f87171", bar: "#ef4444", bg: "rgba(239,68,68,0.06)" },
+  system: { c: "#a78bfa", bar: "#8b5cf6", bg: "rgba(139,92,246,0.06)" },
+};
+
+function classify(m: string): LogEntry["type"] {
+  if (m.includes("complete") || m.includes("passed") || m.includes("published"))
+    return "success";
+  if (m.includes("violation") || m.includes("FAIL") || m.includes("error"))
+    return "error";
+  if (m.includes("flag") || m.includes("revision") || m.includes("Revision"))
+    return "warn";
+  if (m.includes("paused") || m.includes("human")) return "system";
+  return "info";
 }
 
-const LC: Record<LogEntry['type'],{c:string;bar:string;bg:string}> = {
-  info:    {c:'#60a5fa', bar:'#3b82f6', bg:'rgba(59,130,246,0.07)'},
-  success: {c:'#4ade80', bar:'#22c55e', bg:'rgba(34,197,94,0.07)'},
-  warn:    {c:'#fbbf24', bar:'#f59e0b', bg:'rgba(245,158,11,0.07)'},
-  error:   {c:'#f87171', bar:'#ef4444', bg:'rgba(239,68,68,0.07)'},
-  system:  {c:'#c4b5fd', bar:'#8b5cf6', bg:'rgba(139,92,246,0.07)'},
-}
-
-// ── FIXED: old log text was '#2a3050' (invisible) ─────────────────────────────
-const LOG_OLD_TEXT  = '#e0e4ed'   // non-active log entries
-const LOG_TIME_TEXT = '#5a6a8a'   // timestamps
-
-function classify(m: string): LogEntry['type'] {
-  if (m.includes('complete')||m.includes('passed')||m.includes('published')) return 'success'
-  if (m.includes('violation')||m.includes('FAIL')||m.includes('error')) return 'error'
-  if (m.includes('flag')||m.includes('revision')||m.includes('Revision')) return 'warn'
-  if (m.includes('paused')||m.includes('human')) return 'system'
-  return 'info'
-}
-
-function PulseDot({color}:{color:string}) {
+function PulseDot({ color }: { color: string }) {
   return (
-    <div style={{position:'relative',width:10,height:10,flexShrink:0}}>
-      <div style={{position:'absolute',inset:0,borderRadius:'50%',backgroundColor:color,opacity:0.35,animation:'ppPing 1.4s cubic-bezier(0,0,0.2,1) infinite'}}/>
-      <div style={{position:'absolute',inset:0,borderRadius:'50%',backgroundColor:color}}/>
+    <div
+      style={{
+        position: "relative",
+        width: 10,
+        height: 10,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          backgroundColor: color,
+          opacity: 0.35,
+          animation: "ppPing 1.4s cubic-bezier(0,0,0.2,1) infinite",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          backgroundColor: color,
+        }}
+      />
     </div>
-  )
+  );
 }
 
 export default function PipelineProgress() {
-  const navigate = useNavigate()
-  const { runId, companyName } = useApp()
-  const [status, setStatus] = useState<StatusResponse | null>(null)
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const logCounter = useRef(0)
+  const navigate = useNavigate();
+  const { runId, companyName } = useApp();
+  const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const logCounter = useRef(0);
 
-  const passedCount = status ? AGENTS.filter(a => getCardState(a.key, status) === 'passed').length : 0
-  const progress = Math.round((passedCount / AGENTS.length) * 100)
+  const passedCount = status
+    ? AGENTS.filter((a) => getCardState(a.key, status) === "passed").length
+    : 0;
+  const progress = Math.round((passedCount / AGENTS.length) * 100);
 
   useEffect(() => {
-    const rid = runId || 'mock_demo_run'
     const add = (msg: string) => {
-      const type = classify(msg)
-      setLogs(prev => [{ id: logCounter.current++, time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}), msg, type }, ...prev].slice(0, 60))
-    }
-    const poll = () => {
-      const s = getMockStatus(rid); setStatus(s)
-      if (s.current_node) add(`Agent ${s.current_node} — ${s.status}`)
-      if (s.revision_count>0&&s.current_node==='drafter') add(`Revision ${s.revision_count} triggered — fixing brand violations`)
-      if (s.brand_passed&&s.current_node==='brand_checker') add(`Brand score: ${s.brand_score}/100 — passed`)
-      if (s.status==='awaiting_human') add('Pipeline paused — human review required')
-      if (s.status==='complete') add('Pipeline complete — content published')
-      if (s.status==='awaiting_human'||s.status==='complete'||s.status==='error') clearInterval(id)
-    }
-    poll(); const id = setInterval(poll, 2000); return () => clearInterval(id)
-  }, [runId])
-
+      const type = classify(msg);
+      setLogs((prev) =>
+        [
+          {
+            id: logCounter.current++,
+            time: new Date().toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            msg,
+            type,
+          },
+          ...prev,
+        ].slice(0, 60),
+      );
+    };
+    let isFetching = false;
+    const poll = async () => {
+      if (!runId) return;
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        const s = await getStatus(runId);
+        setStatus(s);
+        if (s.current_node) add(`Agent ${s.current_node} — ${s.status}`);
+        if (s.revision_count > 0 && s.current_node === "agent1_drafter")
+          add(
+            `Revision ${s.revision_count} triggered — fixing brand violations`,
+          );
+        if (s.brand_passed && s.current_node === "agent2_quality_guardian")
+          add(`Brand score: ${s.brand_score}/100 — passed`);
+        if (s.status === "awaiting_human")
+          add("Pipeline paused — human review required");
+        if (s.status === "complete")
+          add("Pipeline complete — content published");
+        if (
+          s.status === "awaiting_human" ||
+          s.status === "complete" ||
+          s.status === "error"
+        )
+          clearInterval(id);
+      } finally {
+        isFetching = false;
+      }
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => clearInterval(id);
+  }, [runId]);
   useEffect(() => {
-    if (status?.status==='awaiting_human') setTimeout(()=>navigate('/approve'),1500)
-  }, [status?.status, navigate])
-
-  const revisionActive = status?.current_node==='drafter' && (status?.revision_count??0) > 0
+    if (status?.status === "awaiting_human")
+      setTimeout(() => navigate("/approve"), 1500);
+  }, [status?.status, navigate]);
+  if (!runId || !status) {
+    return (
+      <div
+        style={{
+          backgroundColor: "black",
+          opacity: 0.5,
+          padding: "48px",
+          fontSize: "24px",
+          textAlign: "center",
+          borderRadius: "16px",
+          color: "white",
+        }}
+      >
+        {runId !== "" ? "Loading" : "Pipeline hasn't been run yet"}
+      </div>
+    );
+  }
+  const revisionActive =
+    status?.current_node === "agent1_drafter" &&
+    (status?.revision_count ?? 0) > 0;
 
   return (
     <>
@@ -173,15 +293,58 @@ export default function PipelineProgress() {
         .pp-card:hover { filter: brightness(1.04); }
       `}</style>
 
-      <div style={{position:'relative',zIndex:1,maxWidth:1100,margin:'0 auto',paddingBottom:40}}>
-
-        {/* ── Header ── */}
-        <div style={{marginBottom:28,display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16}}>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1100,
+          margin: "0 auto",
+          paddingBottom: 40,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            marginBottom: 28,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 16,
+          }}
+        >
           <div>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
-              <div style={{width:8,height:8,borderRadius:'50%',background:'#3b82f6',boxShadow:'0 0 12px #3b82f6',animation:status?.pipeline_complete?'none':'ppPing 1.5s ease infinite'}}/>
-              {/* FIXED: was '#f0f4ff' which is fine, keeping but using Outfit font */}
-              <h1 style={{color:'#eef0f8',fontSize:24,fontWeight:700,margin:0,letterSpacing:'-0.02em',fontFamily:"'Outfit', sans-serif"}}>Pipeline Running</h1>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 6,
+              }}
+            >
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#3b82f6",
+                  boxShadow: "0 0 12px #3b82f6",
+                  animation: status?.pipeline_complete
+                    ? "none"
+                    : "ppPing 1.5s ease infinite",
+                }}
+              />
+              <h1
+                style={{
+                  color: "#f0f4ff",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  margin: 0,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Pipeline Running
+              </h1>
             </div>
             {/* FIXED: was '#dee3ef' (barely visible) → '#7a90b8' */}
             <p style={{color:'#7a90b8',fontSize:13.5,margin:0}}>
@@ -190,18 +353,67 @@ export default function PipelineProgress() {
                 : 'Processing content through the agent pipeline…'}
             </p>
           </div>
-
-          {/* Progress ring */}
-          <div style={{background:'rgba(10,12,22,0.8)',backdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:50,padding:'10px 20px',display:'flex',alignItems:'center',gap:12}}>
-            <div style={{position:'relative',width:38,height:38}}>
-              <svg width="38" height="38" style={{transform:'rotate(-90deg)'}}>
-                <circle cx="19" cy="19" r="15" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
-                <circle cx="19" cy="19" r="15" fill="none" stroke="#3b82f6" strokeWidth="3"
-                  strokeDasharray={`${2*Math.PI*15}`}
-                  strokeDashoffset={`${2*Math.PI*15*(1-progress/100)}`}
-                  strokeLinecap="round" style={{transition:'stroke-dashoffset 0.6s ease'}}/>
+          <div
+            style={{
+              background: "rgba(10,12,22,0.75)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid #1a1f30",
+              borderRadius: 50,
+              padding: "10px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: 38,
+                height: 38,
+              }}
+            >
+              <svg
+                width="38"
+                height="38"
+                style={{ transform: "rotate(-90deg)" }}
+              >
+                <circle
+                  cx="19"
+                  cy="19"
+                  r="15"
+                  fill="none"
+                  stroke="#1a1f30"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="19"
+                  cy="19"
+                  r="15"
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="3"
+                  strokeDasharray={`${2 * Math.PI * 15}`}
+                  strokeDashoffset={`${2 * Math.PI * 15 * (1 - progress / 100)}`}
+                  strokeLinecap="round"
+                  style={{
+                    transition: "stroke-dashoffset 0.6s ease",
+                  }}
+                />
               </svg>
-              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'#93c5fd'}}>{progress}%</div>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "#93c5fd",
+                }}
+              >
+                {progress}%
+              </div>
             </div>
             <div>
               <div style={{color:'#eef0f8',fontSize:13,fontWeight:600}}>{passedCount}/{AGENTS.length} agents</div>
@@ -218,15 +430,29 @@ export default function PipelineProgress() {
           <div style={{height:'100%',width:`${progress}%`,background:'linear-gradient(90deg,#3b82f6,#8b5cf6)',transition:'width 0.6s ease',boxShadow:'0 0 10px rgba(59,130,246,0.7)'}}/>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 295px',gap:16,alignItems:'start'}}>
-
-          {/* ── Agent cards ── */}
-          <div style={{display:'flex',flexDirection:'column',gap:7}}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 295px",
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
+          {/* Agent cards */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 7,
+            }}
+          >
             {AGENTS.map((agent, idx) => {
-              const state = status ? getCardState(agent.key, status) : 'pending'
-              const cfg = CFG[state]
-              const isBrandFailed = agent.key==='brand_checker' && state==='failed'
-
+              const state = status
+                ? getCardState(agent.key, status)
+                : "pending";
+              const cfg = CFG[state];
+              const isBrandFailed =
+                agent.key === "agent2_quality_guardian" && state === "failed";
               return (
                 <React.Fragment key={agent.key}>
                   <div
@@ -278,52 +504,103 @@ export default function PipelineProgress() {
                         {agent.description}
                       </div>
                     </div>
-
-                    {/* Right badges + status text */}
-                    <div style={{display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
-                      {agent.key==='brand_checker' && status?.brand_score!=null && (
-                        <span style={{
-                          background: status.brand_score>=80 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                          color: status.brand_score>=80 ? '#86efac' : '#fca5a5',
-                          border: `1px solid ${status.brand_score>=80 ? '#22c55e40' : '#ef444440'}`,
-                          borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700,
-                        }}>{status.brand_score}/100</span>
-                      )}
-                      {agent.key==='legal_reviewer' && (status?.legal_flags_count??0)>0 && (
-                        <span style={{
-                          background:'rgba(245,158,11,0.15)',color:'#fcd34d',
-                          border:'1px solid rgba(245,158,11,0.3)',
-                          borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700,
-                        }}>{status?.legal_flags_count} flag{(status?.legal_flags_count??0)>1?'s':''}</span>
-                      )}
-                      {agent.key==='drafter' && (status?.revision_count??0)>0 && (
-                        <span style={{
-                          background:'rgba(59,130,246,0.15)',color:'#93c5fd',
-                          border:'1px solid rgba(59,130,246,0.3)',
-                          borderRadius:6,padding:'2px 8px',fontSize:11,fontWeight:700,
-                        }}>Rev {status?.revision_count}</span>
-                      )}
-                      <span style={{color:cfg.label,fontSize:11,fontWeight:500,minWidth:78,textAlign:'right'}}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        alignItems: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {agent.key === "agent2_quality_guardian" &&
+                        status?.brand_score != null && (
+                          <span
+                            style={{
+                              background:
+                                status.brand_score >= 0.8
+                                  ? "rgba(34,197,94,0.15)"
+                                  : "rgba(239,68,68,0.15)",
+                              color:
+                                status.brand_score >= 0.8
+                                  ? "#86efac"
+                                  : "#fca5a5",
+                              border: `1px solid ${status.brand_score >= 0.8 ? "#22c55e30" : "#ef444430"}`,
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {status.brand_score * 100}/100
+                          </span>
+                        )}
+                      {agent.key === "agent3_legal_reviewer" &&
+                        (status?.legal_flags_count ?? 0) > 0 && (
+                          <span
+                            style={{
+                              background: "rgba(245,158,11,0.15)",
+                              color: "#fcd34d",
+                              border: "1px solid rgba(245,158,11,0.3)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {status?.legal_flags_count} flag
+                            {(status?.legal_flags_count ?? 0) > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      {agent.key === "agent1_drafter" &&
+                        (status?.revision_count ?? 0) > 0 && (
+                          <span
+                            style={{
+                              background: "rgba(59,130,246,0.15)",
+                              color: "#93c5fd",
+                              border: "1px solid rgba(59,130,246,0.3)",
+                              borderRadius: 6,
+                              padding: "2px 8px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                            }}
+                          >
+                            Rev {status?.revision_count}
+                          </span>
+                        )}
+                      <span
+                        style={{
+                          color: cfg.label,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          minWidth: 78,
+                          textAlign: "right",
+                        }}
+                      >
                         {cfg.text}
                       </span>
                     </div>
                   </div>
-
-                  {/* Brand revision banner */}
                   {isBrandFailed && revisionActive && (
-                    <div style={{
-                      display:'flex',alignItems:'center',gap:8,
-                      padding:'5px 14px',
-                      background:'rgba(239,68,68,0.06)',
-                      border:'1px dashed rgba(239,68,68,0.35)',
-                      borderRadius:7,fontSize:11,
-                      color:'#fca5a5',marginLeft:18,
-                    }}>
-                      ↺ Brand violation — routing back to Content Drafter for revision
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "5px 14px",
+                        background: "rgba(239,68,68,0.05)",
+                        border: "1px dashed rgba(239,68,68,0.3)",
+                        borderRadius: 7,
+                        fontSize: 11,
+                        color: "#fca5a5",
+                        marginLeft: 18,
+                      }}
+                    >
+                      ↺ Brand violation — routing back to Content Drafter for
+                      revision
                     </div>
                   )}
                 </React.Fragment>
-              )
+              );
             })}
 
             {/* Complete banner */}
@@ -426,5 +703,5 @@ export default function PipelineProgress() {
         </div>
       </div>
     </>
-  )
+  );
 }
