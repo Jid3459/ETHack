@@ -2,12 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:          #04050c;
+  --surface:     #080a16;
+  --card:        #0c0f1e;
+  --border:      rgba(255, 255, 255, 0.07);
+  --accent:      #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --purple:      #8b5cf6;
+  --cyan:        #06b6d4;
+  --green:       #10b981;
+  --red:         #ef4444;
+  --amber:       #f59e0b;
+  --text:        #e8eaf0;
+  --sub:         #64748b;
+  --dim:         #2a3050;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: #0f1117;
-  color: #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.45); }
+
+/* Selection */
+::selection { background: rgba(59,130,246,0.3); color: #fff; }
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove default button styles */
+button { font-family: inherit; }
+
+/* Smooth transitions for all interactive elements */
+a, button { transition: opacity 0.15s ease, color 0.15s ease; }
+
+/* Utility */
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }

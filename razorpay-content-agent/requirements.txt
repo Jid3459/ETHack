@@ -1,5 +1,0 @@
-requests==2.31.0
-beautifulsoup4==4.12.3
-firecrawl-py==0.0.16
-apify-client==1.7.1
-tavily-python==0.3.3
