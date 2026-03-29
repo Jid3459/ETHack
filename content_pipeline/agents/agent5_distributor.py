@@ -354,50 +354,55 @@ def agent5_distributor(state: ContentState) -> ContentState:
     company_name = (state.get("company_profile") or {}).get("name", "Company Name")
 
     for platform in platforms:
-        content = _get_content_for_channel(platform, localized, target_languages)
+        for lang in target_languages:
+            # Get the correct language version of the content
+            if lang == "en":
+                content = localized.get("en", state.get("current_draft", ""))
+            else:
+                content = localized.get(lang) or localized.get("en", state.get("current_draft", ""))
 
-        if platform in ("linkedin", "twitter"):
-            # Upload platform image to ImgBB if available, then attach to post
-            image_url: str | None = None
-            local_image_path = generated_images.get(platform)
-            if local_image_path:
-                image_url = _upload_to_imgbb(local_image_path)
-            receipt = _publish_to_buffer(content, platform, scheduled_at, image_url)
+            if platform in ("linkedin", "twitter"):
+                # Use platform+lang specific image e.g. "linkedin_hi"
+                image_url: str | None = None
+                local_image_path = generated_images.get(f"{platform}_{lang}") or generated_images.get(platform)
+                if local_image_path:
+                    image_url = _upload_to_imgbb(local_image_path)
+                receipt = _publish_to_buffer(content, platform, scheduled_at, image_url)
 
-        elif platform == "blog":
-            title = _extract_blog_title(content)
-            receipt = _publish_to_wordpress(content, title, scheduled_at)
+            elif platform == "blog":
+                title = _extract_blog_title(content)
+                receipt = _publish_to_wordpress(content, title, scheduled_at)
 
-        elif platform == "email":
-            subject = _extract_email_subject(content, company_name)
-            receipt = _publish_to_sendgrid(content, subject, scheduled_at)
+            elif platform == "email":
+                subject = _extract_email_subject(content, company_name)
+                receipt = _publish_to_sendgrid(content, subject, scheduled_at)
 
-        else:
-            receipt = DistributionReceipt(
-                channel=platform,
-                platform_id="",
-                published_at=datetime.now(timezone.utc).isoformat(),
-                status="failed",
-                error=f"Unsupported platform: {platform}",
-            )
+            else:
+                receipt = DistributionReceipt(
+                    channel=platform,
+                    platform_id="",
+                    published_at=datetime.now(timezone.utc).isoformat(),
+                    status="failed",
+                    error=f"Unsupported platform: {platform}",
+                )
 
-        # If credentials not configured, mark as simulated publish for demo
-        # so content_patterns still accumulates learning data
-        if receipt["status"] == "failed" and "not configured" in (
-            receipt.get("error") or ""
-        ):
-            receipt = DistributionReceipt(
-                channel=receipt["channel"],
-                platform_id=f"simulated-{state['run_id'][:8]}",
-                published_at=datetime.now(timezone.utc).isoformat(),
-                status="published",
-                error=None,
-            )
-            print(
-                f"[agent5_distributor] No credentials for {platform} — simulating publish for demo"
-            )
+            # If credentials not configured, mark as simulated publish for demo
+            # so content_patterns still accumulates learning data
+            if receipt["status"] == "failed" and "not configured" in (
+                receipt.get("error") or ""
+            ):
+                receipt = DistributionReceipt(
+                    channel=receipt["channel"],
+                    platform_id=f"simulated-{state['run_id'][:8]}",
+                    published_at=datetime.now(timezone.utc).isoformat(),
+                    status="published",
+                    error=None,
+                )
+                print(
+                    f"[agent5_distributor] No credentials for {platform}/{lang} — simulating publish for demo"
+                )
 
-        receipts.append(receipt)
+            receipts.append(receipt)
 
     failed = [r for r in receipts if r["status"] == "failed"]
 

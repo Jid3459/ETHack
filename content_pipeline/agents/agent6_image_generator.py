@@ -189,48 +189,54 @@ def agent6_image_generator(state: ContentState) -> ContentState:
     company_name = profile.get("name", state.get("company_id", ""))
     run_id = state["run_id"]
 
-    # Pick localized draft for image text if a non-English language was requested.
-    # Falls back to current_draft (English) if no localization exists.
     localized_versions: dict = state.get("localized_versions", {})
     target_languages: list = state.get("target_languages", ["en"])
-    draft = state.get("current_draft", "")
+    english_draft = state.get("current_draft", "")
+
+    # Build {lang: draft} map for every requested language
+    lang_drafts: dict[str, str] = {}
     for lang in target_languages:
-        if lang != "en" and localized_versions.get(lang):
-            draft = localized_versions[lang]
-            print(f"  [image_generator] Using localized draft (lang={lang}) for image text")
-            break
+        if lang == "en":
+            lang_drafts["en"] = english_draft
+        elif localized_versions.get(lang):
+            lang_drafts[lang] = localized_versions[lang]
+        else:
+            lang_drafts[lang] = english_draft  # fallback if translation missing
 
-    # Extract one headline for all platforms (same approved draft)
-
+    # Generate one image per platform per language
+    # Key format: "{platform}_{lang}"  e.g. "linkedin_hi", "twitter_mr"
     generated: dict[str, str] = {}
     failed: list[str] = []
 
-    for platform in target_platforms:
-        data = _extract_information(draft, llm, platform)
-        try:
-            output_path = IMAGE_OUTPUT_DIR / f"{run_id}_{platform}.png"
-            image_data = json.load(
-                open(Path(BRAND_IMAGES_DIR) / company_name.lower() / "image_data.json")
-            )
-            data["logo"] = f"brand_images/{company_name.lower()}/{image_data["logo"]}"
-            data["background_image"] = (
-                f"brand_images/{company_name.lower()}/{image_data[f"{platform}_bg"]}"
-            )
+    try:
+        image_data = json.load(
+            open(Path(BRAND_IMAGES_DIR) / company_name.lower() / "image_data.json")
+        )
+    except Exception as exc:
+        print(f"  [image_generator] Could not load image_data.json: {exc}")
+        image_data = {}
 
-            if "brand_colors" not in profile:
-                data["brand_colors"] = {"primary": "#000", "secondary": "#000"}
-            data["brand_colors"] = profile["brand_colors"]
-            render_image(
-                platform=platform,
-                data=data,
-                company_name=company_name,
-                output_path=output_path,
-            )
-            generated[platform] = str(output_path)
-            print(f"  [image_generator] Saved {platform} image → {output_path}")
-        except Exception as exc:
-            print(f"  [image_generator] ERROR generating {platform} image: {exc}")
-            failed.append(platform)
+    for platform in target_platforms:
+        for lang, draft in lang_drafts.items():
+            data = _extract_information(draft, llm, platform)
+            try:
+                output_path = IMAGE_OUTPUT_DIR / f"{run_id}_{platform}_{lang}.png"
+                data["logo"] = f"brand_images/{company_name.lower()}/{image_data.get('logo', '')}"
+                data["background_image"] = (
+                    f"brand_images/{company_name.lower()}/{image_data.get(f'{platform}_bg', '')}"
+                )
+                data["brand_colors"] = profile.get("brand_colors", {"primary": "#000", "secondary": "#000"})
+                render_image(
+                    platform=platform,
+                    data=data,
+                    company_name=company_name,
+                    output_path=output_path,
+                )
+                generated[f"{platform}_{lang}"] = str(output_path)
+                print(f"  [image_generator] Saved {platform}/{lang} image → {output_path}")
+            except Exception as exc:
+                print(f"  [image_generator] ERROR generating {platform}/{lang} image: {exc}")
+                failed.append(f"{platform}_{lang}")
 
     print(f"Image Generation Complete. Generated: {list(generated.keys())}")
 
