@@ -840,114 +840,376 @@ function DecisionBar({
   );
 }
 
+// ── A/B Variant Card (used only in A/B mode) ────────────────────────────────────
+function ABVariantApprovalCard({
+  label,
+  color,
+  approval,
+  onSelectPublish,
+  onRejectRedraft,
+  submitting,
+  disabled,
+}: {
+  label: string;
+  color: string;
+  approval: ApprovalData;
+  onSelectPublish: () => void;
+  onRejectRedraft: (feedback: string) => void;
+  submitting: boolean;
+  disabled: boolean;
+}) {
+  const [showReject, setShowReject] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: T.card,
+        border: `1px solid ${color}40`,
+        borderRadius: 16,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        gap: 0,
+      }}
+    >
+      {/* Variant header */}
+      <div
+        style={{
+          background: `linear-gradient(90deg, ${color}18 0%, transparent 100%)`,
+          borderBottom: `1px solid ${color}25`,
+          padding: "12px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: 7,
+            background: color,
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 900,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {label}
+        </div>
+        <span style={{ color, fontSize: 13, fontWeight: 700 }}>
+          Variant {label} — {label === "A" ? "Data-led" : "Story-led"}
+        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
+          <span style={{ color: T.sub, fontSize: 11 }}>
+            Brand:{" "}
+            <span
+              style={{
+                color: approval.brand_score >= 0.8 ? T.green : T.amber,
+                fontWeight: 700,
+              }}
+            >
+              {Math.round(approval.brand_score * 100)}/100
+            </span>
+          </span>
+          <span style={{ color: T.sub, fontSize: 11 }}>
+            Legal flags:{" "}
+            <span
+              style={{
+                color: approval.legal_flags.length ? T.amber : T.green,
+                fontWeight: 700,
+              }}
+            >
+              {approval.legal_flags.length}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      {/* Draft */}
+      <div style={{ padding: "0 0 0 0" }}>
+        <DraftPanel
+          draft={approval.draft}
+          brandViolations={approval.brand_violations}
+          legalFlags={approval.legal_flags}
+        />
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10 }}>
+          <motion.button
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.97 }}
+            disabled={submitting || disabled}
+            onClick={onSelectPublish}
+            style={{
+              flex: 1,
+              padding: "12px 0",
+              background: disabled ? T.dim : `linear-gradient(135deg, ${T.green}, #059669)`,
+              border: "none",
+              borderRadius: 10,
+              color: disabled ? T.sub : "#fff",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: disabled || submitting ? "not-allowed" : "pointer",
+              boxShadow: disabled ? "none" : `0 0 18px ${T.green}30`,
+              transition: "all 0.2s",
+            }}
+          >
+            {submitting ? "Submitting…" : "✓  Select & Publish"}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.97 }}
+            disabled={submitting || disabled}
+            onClick={() => setShowReject(!showReject)}
+            style={{
+              flex: 1,
+              padding: "12px 0",
+              background: "transparent",
+              border: `1px solid ${T.red}50`,
+              borderRadius: 10,
+              color: T.red,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: disabled || submitting ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            ✗  Reject & Redraft
+          </motion.button>
+        </div>
+
+        <AnimatePresence>
+          {showReject && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: "hidden" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Feedback for agent revision (e.g. stronger opening, add metrics…)"
+                  style={{
+                    width: "100%",
+                    height: 70,
+                    backgroundColor: "#080b14",
+                    border: `1px solid ${T.border}`,
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                    color: T.text,
+                    fontSize: 12,
+                    resize: "vertical",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  disabled={submitting}
+                  onClick={() => onRejectRedraft(feedback)}
+                  style={{
+                    padding: "10px",
+                    background: T.red,
+                    border: "none",
+                    borderRadius: 8,
+                    color: "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: submitting ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {submitting ? "Submitting…" : "Confirm Reject & Redraft"}
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Success Screen (shared) ──────────────────────────────────────────────────────
+function SuccessScreen({ approved }: { approved: boolean }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: T.bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{
+          maxWidth: 440,
+          width: "100%",
+          backgroundColor: T.card,
+          borderRadius: 20,
+          padding: "48px 36px",
+          textAlign: "center",
+          border: `1px solid ${approved ? `${T.green}50` : `${T.red}50`}`,
+          boxShadow: `0 0 60px ${approved ? `${T.green}18` : `${T.red}18`}`,
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 280, delay: 0.1 }}
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
+            margin: "0 auto 24px",
+            backgroundColor: approved ? `${T.green}18` : `${T.red}18`,
+            border: `2px solid ${approved ? T.green : T.red}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 32,
+            boxShadow: `0 0 30px ${approved ? T.green : T.red}30`,
+          }}
+        >
+          {approved ? "✓" : "✗"}
+        </motion.div>
+        <div style={{ color: T.text, fontSize: 22, fontWeight: 700, marginBottom: 12 }}>
+          {approved ? "Content Approved" : "Sent Back for Revision"}
+        </div>
+        <div style={{ color: T.sub, fontSize: 14, lineHeight: 1.6 }}>
+          {approved
+            ? "Resuming pipeline — localisation and distribution running…"
+            : "Feedback injected — agent will revise the draft…"}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────────
 export default function HumanApproval() {
   const navigate = useNavigate();
   const { runId } = useApp();
+
+  // Detect A/B mode from sessionStorage
+  const runIdB = sessionStorage.getItem("ab_variant_b") || "";
+  const isABMode = !!runIdB;
+
   const [approval, setApproval] = useState<ApprovalData | null>(null);
+  const [approvalB, setApprovalB] = useState<ApprovalData | null>(null);
+
   useEffect(() => {
     if (!runId) return;
-
-    const getApprovalData = async () => {
+    const poll = async () => {
       try {
-        const status = await getStatus(runId);
-        setApproval(status.approval_data);
+        const statusA = await getStatus(runId);
+        if (statusA.approval_data) setApproval(statusA.approval_data);
+        if (isABMode && runIdB) {
+          const statusB = await getStatus(runIdB);
+          if (statusB.approval_data) setApprovalB(statusB.approval_data);
+        }
       } catch (e) {
         console.error("Failed to fetch approval data", e);
       }
     };
+    poll();
+    // Poll every 4s until both drafts are ready
+    const interval = setInterval(() => {
+      if (approval && (!isABMode || approvalB)) { clearInterval(interval); return; }
+      poll();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [runId, runIdB, isABMode]);
 
-    getApprovalData();
-  }, [runId]);
   const [decision, setDecision] = useState<"approve" | "reject" | null>(null);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedApproved, setSubmittedApproved] = useState(false);
 
+  // ── Single variant submit ─────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!decision) return;
     setSubmitting(true);
     try {
       await submitApproval(runId, decision, feedback || undefined);
+      setSubmittedApproved(decision === "approve");
       setSubmitted(true);
-      setTimeout(
-        () => navigate(decision === "approve" ? "/audit" : "/brief"),
-        1600,
-      );
+      setTimeout(() => navigate(decision === "approve" ? "/audit" : "/brief"), 1600);
     } catch {
       setSubmitting(false);
     }
   };
 
-  // ── Success screen ────────────────────────────────────────────────────────────
-  if (submitted) {
-    const ok = decision === "approve";
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: T.bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{
-            maxWidth: 440,
-            width: "100%",
-            backgroundColor: T.card,
-            borderRadius: 20,
-            padding: "48px 36px",
-            textAlign: "center",
-            border: `1px solid ${ok ? `${T.green}50` : `${T.red}50`}`,
-            boxShadow: `0 0 60px ${ok ? `${T.green}18` : `${T.red}18`}`,
-          }}
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 280, delay: 0.1 }}
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              margin: "0 auto 24px",
-              backgroundColor: ok ? `${T.green}18` : `${T.red}18`,
-              border: `2px solid ${ok ? T.green : T.red}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 32,
-              boxShadow: `0 0 30px ${ok ? T.green : T.red}30`,
-            }}
-          >
-            {ok ? "✓" : "✗"}
-          </motion.div>
-          <div
-            style={{
-              color: T.text,
-              fontSize: 22,
-              fontWeight: 700,
-              marginBottom: 12,
-            }}
-          >
-            {ok ? "Content Approved" : "Sent Back for Revision"}
-          </div>
-          <div style={{ color: T.sub, fontSize: 14, lineHeight: 1.6 }}>
-            {ok
-              ? "Resuming pipeline — localisation and distribution running…"
-              : "Feedback injected — agent will revise the draft…"}
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // ── A/B: select variant A → approve A, reject B ───────────────────────────────
+  const [submittingA, setSubmittingA] = useState(false);
+  const [submittingB, setSubmittingB] = useState(false);
+  const [doneA, setDoneA] = useState(false);
+  const [doneB, setDoneB] = useState(false);
 
-  // ── Header strip ─────────────────────────────────────────────────────────────
-  if (!runId || !approval) {
+  const handleSelectA = async () => {
+    setSubmittingA(true);
+    try {
+      await submitApproval(runId, "approve", undefined);
+      await submitApproval(runIdB, "reject", "Other variant was selected in A/B test");
+      sessionStorage.removeItem("ab_variant_b");
+      sessionStorage.removeItem("ab_group_id");
+      setSubmittedApproved(true);
+      setSubmitted(true);
+      setTimeout(() => navigate("/audit"), 1600);
+    } catch { setSubmittingA(false); }
+  };
+
+  const handleRejectA = async (fb: string) => {
+    setSubmittingA(true);
+    try {
+      await submitApproval(runId, "reject", fb || "Rejected for revision");
+      setDoneA(true);
+    } catch { setSubmittingA(false); }
+  };
+
+  const handleSelectB = async () => {
+    setSubmittingB(true);
+    try {
+      await submitApproval(runIdB, "approve", undefined);
+      await submitApproval(runId, "reject", "Other variant was selected in A/B test");
+      sessionStorage.removeItem("ab_variant_b");
+      sessionStorage.removeItem("ab_group_id");
+      setSubmittedApproved(true);
+      setSubmitted(true);
+      setTimeout(() => navigate("/audit"), 1600);
+    } catch { setSubmittingB(false); }
+  };
+
+  const handleRejectB = async (fb: string) => {
+    setSubmittingB(true);
+    try {
+      await submitApproval(runIdB, "reject", fb || "Rejected for revision");
+      setDoneB(true);
+    } catch { setSubmittingB(false); }
+  };
+
+  // ── Success screen ────────────────────────────────────────────────────────────
+  if (submitted) return <SuccessScreen approved={submittedApproved} />;
+
+  // ── Loading ───────────────────────────────────────────────────────────────────
+  const loadingA = !approval;
+  const loadingB = isABMode && !approvalB;
+
+  if (!runId || (loadingA || loadingB)) {
     return (
       <div
         style={{
@@ -960,174 +1222,110 @@ export default function HumanApproval() {
           color: "white",
         }}
       >
-        {runId !== "" ? "Loading" : "Pipeline hasn't been run yet"}
+        {runId !== ""
+          ? isABMode
+            ? `Loading variants… (A: ${approval ? "ready" : "waiting"}, B: ${approvalB ? "ready" : "waiting"})`
+            : "Loading…"
+          : "Pipeline hasn't been run yet"}
       </div>
     );
   }
+
+  // ── A/B MODE: side-by-side ────────────────────────────────────────────────────
+  if (isABMode && approval && approvalB) {
+    return (
+      <div style={{ background: T.bg, minHeight: "100vh", paddingBottom: 40 }}>
+        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 800, height: 300, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at top, rgba(59,130,246,0.06) 0%, transparent 70%)" }} />
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px", position: "relative", zIndex: 1 }}>
+
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}33, ${T.purple}33)`, border: `1px solid ${T.accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>◉</div>
+              <h1 style={{ color: T.text, fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>A/B Variant Review</h1>
+              <span style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 12, padding: "3px 12px", fontSize: 11, color: T.purple, fontWeight: 700, letterSpacing: "0.05em" }}>A/B TEST</span>
+            </div>
+            <p style={{ color: T.sub, fontSize: 14, margin: 0 }}>
+              Compare both variants and select the one to publish. Selecting one auto-rejects the other.
+            </p>
+          </motion.div>
+
+          {/* Side-by-side cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <ABVariantApprovalCard
+              label="A"
+              color={T.accent}
+              approval={approval}
+              onSelectPublish={handleSelectA}
+              onRejectRedraft={handleRejectA}
+              submitting={submittingA}
+              disabled={doneA || doneB}
+            />
+            <ABVariantApprovalCard
+              label="B"
+              color={T.purple}
+              approval={approvalB}
+              onSelectPublish={handleSelectB}
+              onRejectRedraft={handleRejectB}
+              submitting={submittingB}
+              disabled={doneA || doneB}
+            />
+          </div>
+
+          {/* Status strip after reject */}
+          {(doneA || doneB) && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ marginTop: 20, background: `${T.amber}12`, border: `1px solid ${T.amber}30`, borderRadius: 12, padding: "14px 20px", color: T.amber, fontSize: 13, textAlign: "center" }}
+            >
+              Variant {doneA ? "A" : "B"} rejected and sent for redraft. Variant {doneA ? "B" : "A"} is still awaiting your decision.
+            </motion.div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── SINGLE MODE: original UI ──────────────────────────────────────────────────
   const metricCards = [
-    {
-      label: "Brand Score",
-      value: `${approval.brand_score * 100}/100`,
-      color: approval.brand_score >= 0.8 ? T.green : T.red,
-    },
-    {
-      label: "Legal Flags",
-      value: String(approval.legal_flags.length),
-      color: approval.legal_flags.length ? T.amber : T.green,
-    },
-    {
-      label: "SEO Tips",
-      value: `${1}`,
-      color: T.cyan,
-    },
+    { label: "Brand Score", value: `${Math.round(approval.brand_score * 100)}/100`, color: approval.brand_score >= 0.8 ? T.green : T.red },
+    { label: "Legal Flags", value: String(approval.legal_flags.length), color: approval.legal_flags.length ? T.amber : T.green },
+    { label: "SEO Tips", value: `${1}`, color: T.cyan },
   ];
 
   return (
     <div style={{ background: T.bg, minHeight: "100vh", paddingBottom: 40 }}>
-      {/* ── Ambient glow ─────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 800,
-          height: 300,
-          pointerEvents: "none",
-          zIndex: 0,
-          background:
-            "radial-gradient(ellipse at top, rgba(59,130,246,0.06) 0%, transparent 70%)",
-        }}
-      />
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 800, height: 300, pointerEvents: "none", zIndex: 0, background: "radial-gradient(ellipse at top, rgba(59,130,246,0.06) 0%, transparent 70%)" }} />
 
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          padding: "32px 24px",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        {/* ── Page header ──────────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: 28,
-          }}
-        >
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px", position: "relative", zIndex: 1 }}>
+        {/* ── Page header ────────────────────────────────────────────────────── */}
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 8,
-              }}
-            >
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: `linear-gradient(135deg, ${T.accent}33, ${T.purple}33)`,
-                  border: `1px solid ${T.accent}40`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 16,
-                }}
-              >
-                ◉
-              </div>
-              <h1
-                style={{
-                  color: T.text,
-                  fontSize: 24,
-                  fontWeight: 700,
-                  margin: 0,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Human Review Gate
-              </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${T.accent}33, ${T.purple}33)`, border: `1px solid ${T.accent}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>◉</div>
+              <h1 style={{ color: T.text, fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Human Review Gate</h1>
             </div>
-            <p style={{ color: T.sub, fontSize: 14, margin: 0 }}>
-              Review the draft and compliance reports before publishing
-            </p>
+            <p style={{ color: T.sub, fontSize: 14, margin: 0 }}>Review the draft and compliance reports before publishing</p>
           </div>
-
-          {/* Quick metric strip */}
           <div style={{ display: "flex", gap: 10 }}>
             {metricCards.map((m) => (
-              <motion.div
-                key={m.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                style={{
-                  background: T.card,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 12,
-                  padding: "10px 18px",
-                  textAlign: "center",
-                  boxShadow: `0 0 20px ${m.color}10`,
-                }}
-              >
-                <div
-                  style={{
-                    color: T.sub,
-                    fontSize: 10,
-                    marginBottom: 4,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {m.label}
-                </div>
-                <div style={{ color: m.color, fontSize: 18, fontWeight: 700 }}>
-                  {m.value}
-                </div>
+              <motion.div key={m.label} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 18px", textAlign: "center", boxShadow: `0 0 20px ${m.color}10` }}>
+                <div style={{ color: T.sub, fontSize: 10, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{m.label}</div>
+                <div style={{ color: m.color, fontSize: 18, fontWeight: 700 }}>{m.value}</div>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        {/* ── Two-column body ───────────────────────────────────────────────────── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.1fr 0.9fr",
-            gap: 20,
-          }}
-        >
-          {/* Left: draft + decision */}
+        {/* ── Two-column body ─────────────────────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 20 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <DraftPanel
-              draft={approval.draft}
-              brandViolations={approval.brand_violations}
-              legalFlags={approval.legal_flags}
-            />
-            <DecisionBar
-              decision={decision}
-              setDecision={setDecision}
-              feedback={feedback}
-              setFeedback={setFeedback}
-              submitting={submitting}
-              onSubmit={handleSubmit}
-            />
+            <DraftPanel draft={approval.draft} brandViolations={approval.brand_violations} legalFlags={approval.legal_flags} />
+            <DecisionBar decision={decision} setDecision={setDecision} feedback={feedback} setFeedback={setFeedback} submitting={submitting} onSubmit={handleSubmit} />
           </div>
-
-          {/* Right: reports */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <BrandPanel
-              score={approval.brand_score}
-              violations={approval.brand_violations}
-            />
+            <BrandPanel score={approval.brand_score} violations={approval.brand_violations} />
             <LegalPanel flags={approval.legal_flags} />
             <SEOPanel suggestions={approval.seo_suggestions} />
           </div>
